@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from typing import Optional
 
 from .provider_errors import ProviderToolPermissionError, tool_permission_denial
+from .processes import ProcessCompletionError
 
 
 MAX_TRANSIENT_RETRIES = 1
@@ -42,6 +43,8 @@ class RetryDecision:
 
 
 def classify_failure(error: object) -> FailureClassification:
+    if isinstance(error, ProcessCompletionError):
+        return FailureClassification("cleanup_failed", False)
     text = str(error or "").strip()
     lowered = text.lower()
     # Policy failures outrank empty output and incidental transient-error text.

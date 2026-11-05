@@ -8,6 +8,7 @@ onto these helpers gradually without changing their stdout contracts.
 from __future__ import annotations
 
 import json
+import os
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
 
 from .redaction import redact_text, redact_mapping
@@ -35,12 +36,25 @@ def bullet_list(items: Iterable[str], *, prefix: str = "- ") -> str:
     return "\n".join(f"{prefix}{redact_text(item).strip()}" for item in items if str(item).strip())
 
 
-def fanout_payload(label: str, results: Sequence[Tuple[str, str, Optional[str]]]) -> List[Dict[str, Optional[str]]]:
+def fanout_payload(label: str, results: Sequence[Tuple[str, str, Optional[str]]]) -> List[Dict[str, Any]]:
     """Convert fan-out tuples into the stable JSON shape used by ask/review."""
-    return [
-        {"validator": name, label: redact_text(answer), "error": redact_text(error) if error else None}
-        for name, answer, error in results
-    ]
+    from .processes import CompletionDiagnostic
+    from .diagnostics import redact_diagnostic
+
+    payload = []
+    for name, answer, error in results:
+        row = {"validator": name, label: redact_text(answer), "error": redact_text(error) if error else None}
+        if isinstance(error, CompletionDiagnostic):
+            c = error.completion
+            row["completion"] = {
+                "status": "UNVERIFIED", "cleanup": c.cleanup_result,
+                "stdout_complete": c.stdout_complete,
+                "stdout_truncated": c.stdout_truncated, "returncode": c.returncode,
+            }
+            if os.environ.get("LOPE_RECOVER_UNVERIFIED_OUTPUT") == "1":
+                row["unverified_output"] = redact_text(redact_diagnostic(c.stdout))
+        payload.append(row)
+    return payload
 
 
 __all__ = ["print_json", "section", "bullet_list", "fanout_payload"]

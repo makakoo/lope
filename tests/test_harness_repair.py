@@ -189,5 +189,5 @@ def test_completion_failure_is_not_success_in_builtin_adapter(monkeypatch):
     monkeypatch.setattr("lope.validators.run_subprocess_group", fail)
     with pytest.raises(ProviderInfrastructureError) as raised:
         _run_with_group_kill(["fixture"], None, 8, ".")
-    assert "cleanup failed" in str(raised.value) and "PARTIAL" in str(raised.value)
+    assert "completion unverified" in str(raised.value) and "PARTIAL" in str(raised.value)
     assert "secret-value" not in str(raised.value)

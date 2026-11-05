@@ -952,3 +952,28 @@ Built by Sebastian Schkudlara (Traylinx). MIT licensed. Caveman mode core rules 
 # Runtime safety and request planning
 
 See [job-lifecycle.md](job-lifecycle.md) for ownership, cancellation, and safe stale-job reconciliation. Every multi-call command accepts `--run-timeout`; `--timeout` remains a per-call ceiling. Request admission reports a deterministic plan before launch and bounds direct input, chunk count, calls, and output bytes.
+
+
+## Recovering unverified subprocess output (0.17.3)
+
+If a custom subprocess provider exits but its pipes or owned process group cannot
+be verified closed, the call still fails. A zero exit code is not proof of safe
+completion. JSON fanout responses retain an empty answer/error pair plus
+`completion` metadata: `status: UNVERIFIED`, cleanup result, return code, and
+stdout completeness/truncation flags. Such output never counts toward quorum.
+
+To recover the bounded text for manual inspection during a new invocation:
+
+```bash
+LOPE_RECOVER_UNVERIFIED_OUTPUT=1 lope ask "Your task" --validators NAME --json
+```
+
+The response may contain `unverified_output`, separate from the accepted answer.
+Only the exact environment value `1` enables it. Recovery is not retroactive and
+does not turn a failed call into success. No new persistent recovery store is
+created. Ordinary success/error response shapes are unchanged. Known credential
+and reasoning patterns are redacted; this is not a guarantee of arbitrary secret
+or personal-data detection. Review recovered text before sharing or executing it.
+
+This feature does not grant native CLI tool permissions or override provider
+timeouts. Text-only generation does not prove that a teammate can edit files.

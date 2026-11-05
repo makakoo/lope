@@ -49,10 +49,27 @@ class InputLimitExceeded(RuntimeError):
 class ProcessCompletionError(OSError):
     """A parent exited, but safe local completion could not be established."""
 
-    def __init__(self, reason: str, stdout: str = "", stderr: str = ""):
-        super().__init__(reason)
+    def __init__(self, reason: str, stdout: str = "", stderr: str = "", *,
+                 cleanup_result: str = "unknown", stdout_complete: bool = False,
+                 stdout_truncated: bool = False, returncode=None):
+        safe_reasons = {"provider exited but output pipes did not close after bounded drain",
+                        "provider exited but owned descendants could not be reaped"}
+        super().__init__(reason if reason in safe_reasons else "provider completion unverified")
         self.stdout = stdout
         self.stderr = stderr
+        self.cleanup_result = cleanup_result
+        self.stdout_complete = stdout_complete
+        self.stdout_truncated = stdout_truncated
+        self.returncode = returncode
+
+
+class CompletionDiagnostic(str):
+    """Safe error text; optional recovery stays outside accepted answers."""
+
+    def __new__(cls, error: ProcessCompletionError):
+        value = super().__new__(cls, str(error))
+        value.completion = error
+        return value
 
 
 def _have_process_groups() -> bool:
@@ -295,7 +312,13 @@ def run_subprocess_group(
                 raise FileNotFoundError(reason)
             raise OSError(reason or "provider launch failed")
         if outcome in ("cleanup_failed", "output_drain_timeout"):
-            raise ProcessCompletionError(reason or outcome, stdout=stdout, stderr=stderr)
+            raise ProcessCompletionError(
+                reason or outcome, stdout=stdout, stderr=stderr,
+                cleanup_result=str(result.get("cleanup_result") or "unknown"),
+                stdout_complete=bool(result.get("stdout_complete", False)),
+                stdout_truncated=bool(result.get("stdout_truncated", False)),
+                returncode=result.get("returncode"),
+            )
         return subprocess.CompletedProcess(
             args=list(command),
             returncode=int(result.get("returncode", -1)),

@@ -20,6 +20,7 @@ def _generate_once(validator: Any, prompt: str, timeout: float, context) -> str:
 def _outcome_for(error: object) -> OutcomeClass:
     kind = classify_failure(error).kind
     return {
+        "cleanup_failed": OutcomeClass.CLEANUP_FAILED,
         "rate_limited": OutcomeClass.RATE_LIMITED,
         "provider_timeout": OutcomeClass.PROVIDER_TIMEOUT,
         "output_limit": OutcomeClass.OUTPUT_LIMIT,

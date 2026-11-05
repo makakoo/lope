@@ -109,9 +109,13 @@ def _process_group_count(pgid: int, *, timeout: float = 0.3) -> int:
     except ProcessLookupError:
         return 0  # Common case: no process-table subprocess is necessary.
     except PermissionError:
-        pass  # Inspect rather than claiming another user's group is absent.
+        return 1  # Present but not signalable; never empty.
     except OSError:
         return -1
+    # Darwin ps startup can exceed the whole cleanup budget. Observe the
+    # kernel group directly; zombie/live ambiguity remains fail-closed.
+    if sys.platform == "darwin":
+        return 1
     try:
         proc = subprocess.run(
             ["/bin/ps", "-axo", "pgid=,pid=,stat="],
@@ -265,7 +269,7 @@ def _wait_group_exit(pgid: int, deadline: float) -> int:
         remaining = _process_group_count(
             pgid, timeout=min(0.3, max(0.001, deadline - time.monotonic()))
         )
-        if remaining <= 0:  # Zero is proven empty; -1 is unknown, not live.
+        if remaining == 0:  # Empty is terminal; unknown may be transient.
             break
         time.sleep(min(0.05, max(0.0, deadline - time.monotonic())))
     return remaining
@@ -278,8 +282,9 @@ def _terminate_and_reap(proc: subprocess.Popen) -> Tuple[str, int]:
     deadline = time.monotonic() + CLEANUP_TIMEOUT_SECONDS
     targeted = int(proc.poll() is None)
     already_exited = not targeted
+    group_absent = False
     if not already_exited:
-        _signal_tree(proc, signal.SIGTERM)
+        group_absent = _signal_tree(proc, signal.SIGTERM) == "already_exited"
         try:
             proc.wait(timeout=min(TERM_GRACE_SECONDS, max(0.0, deadline - time.monotonic())))
         except subprocess.TimeoutExpired:
@@ -287,8 +292,9 @@ def _terminate_and_reap(proc: subprocess.Popen) -> Tuple[str, int]:
     # A clean leader exit says nothing about descendants. Always signal the
     # owned POSIX group, without a slow/fallible census gating escalation.
     kill_result = "already_exited"
-    if os.name == "posix" or proc.poll() is None:
+    if not group_absent and (os.name == "posix" or proc.poll() is None):
         kill_result = _signal_tree(proc, getattr(signal, "SIGKILL", signal.SIGTERM))
+        group_absent = kill_result == "already_exited"
     if proc.poll() is None:
         try:
             proc.kill()
@@ -298,7 +304,7 @@ def _terminate_and_reap(proc: subprocess.Popen) -> Tuple[str, int]:
         proc.wait(timeout=min(KILL_GRACE_SECONDS, max(0.0, deadline - time.monotonic())))
     except subprocess.TimeoutExpired:
         return "cleanup_failed:child_not_reaped", targeted
-    remaining = _wait_group_exit(proc.pid, deadline) if os.name == "posix" else 0
+    remaining = _wait_group_exit(proc.pid, deadline) if os.name == "posix" and not group_absent else 0
     if remaining < 0:
         return "cleanup_failed:inspection_unknown", targeted
     if remaining:
@@ -569,6 +575,8 @@ def _run_provider_impl(spec: Dict[str, Any], control_fd: int, *, on_spawn) -> Di
             cleanup = windows_job
         result = {
             "returncode": returncode,
+            "stdout_complete": "stdout" not in streams_open and stdout.total <= stdout_limit,
+            "stdout_truncated": stdout.total > stdout_limit,
             "stdout": stdout.value().decode("utf-8", errors="replace"),
             "stderr": stderr.value().decode("utf-8", errors="replace"),
             "outcome": outcome,

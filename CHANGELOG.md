@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.17.3 — Subprocess completion and recoverable output
+
+- Avoid slow process-table subprocesses during macOS cleanup; use kernel process-group existence checks. Retry unknown inspection within the existing deadline and stop signalling after proven absence. Unverified cleanup remains a failure.
+- Preserve typed completion failures through custom subprocess generation and JSON fanout. Report cleanup failures accurately, with no automatic retry and no success/quorum credit.
+- Add opt-in `LOPE_RECOVER_UNVERIFIED_OUTPUT=1` for bounded, redacted failed-call output in a separate `unverified_output` JSON field. Default responses contain completion metadata but not the failed output body.
+- Add deterministic cleanup and printed-JSON regressions, including tests delivered by a real Lope teammate assignment. Native tool permissions and provider timeout configuration are unchanged.
+
 ## 0.17.2 — Publishing metadata compatibility
 
 - Update the SHA-pinned PyPA publisher to v1.14.3 and align artifact-check Twine/Packaging versions with its runtime. The previous action rejected Metadata-Version 2.5 before upload, despite current local and CI validation passing.

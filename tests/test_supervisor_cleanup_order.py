@@ -53,6 +53,7 @@ def test_exited_leader_still_kills_group_before_inspection(monkeypatch):
 
 def test_census_failure_is_unknown_not_clean(monkeypatch):
     monkeypatch.setattr(supervisor.os, "killpg", lambda *args: None)
+    monkeypatch.setattr(supervisor.sys, "platform", "linux")
     def fail(*args, **kwargs):
         assert kwargs["timeout"] <= 0.3
         raise subprocess.TimeoutExpired("ps", 0.3)
@@ -81,6 +82,8 @@ def test_failed_cleanup_is_not_confused_with_clean_prefix(monkeypatch):
         os.close(writer)
     assert result["outcome"] == "cleanup_failed"
     assert result["stdout"].strip() == "done"
+    assert result["stdout_complete"] is True
+    assert result["stdout_truncated"] is False
 
 
 def test_supervisor_bounds_identity_probes_before_event_loop(monkeypatch):
@@ -124,8 +127,8 @@ def test_cleanup_waits_share_one_deadline(monkeypatch):
     assert status == "cleanup_failed:inspection_unknown"
 
 
-@pytest.mark.parametrize("count", [0, -1])
-def test_group_inspection_does_not_repeat_empty_or_unknown_result(monkeypatch, count):
+@pytest.mark.parametrize("count", [0])
+def test_group_inspection_does_not_repeat_proven_empty_result(monkeypatch, count):
     calls = []
     def census(*args, **kwargs):
         calls.append(1)

@@ -60,6 +60,7 @@ from .diagnostics import diagnostic_suffix, redact_diagnostic
 from .runtime import DEFAULT_MODEL_CALL_TIMEOUT_SECONDS
 from .validators import Validator, parse_opencode_verdict
 from .provider_errors import ProviderToolPermissionError, tool_permission_denial
+from .processes import ProcessCompletionError
 
 
 class ConfigError(ValueError):
@@ -405,6 +406,11 @@ class GenericSubprocessValidator(Validator):
                 f"{self._name} binary not found: "
                 + redact_diagnostic(e.filename or self._executable_for(context))
             ) from None
+        except ProcessCompletionError as e:
+            denial = self._permission_error(e.stderr)
+            if denial is not None:
+                raise denial from None
+            raise e from None
         except Exception as e:
             denial = self._permission_error(getattr(e, "stderr", None))
             if denial is not None:

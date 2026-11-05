@@ -3105,7 +3105,9 @@ def _fanout_generate(
         except BudgetExhausted as exc:
             completed.put((validator, "", f"{exc.reason}: {exc}"))
         except Exception as exc:
-            completed.put((validator, "", str(exc)))
+            from .processes import CompletionDiagnostic, ProcessCompletionError
+            error = CompletionDiagnostic(exc) if isinstance(exc, ProcessCompletionError) else str(exc)
+            completed.put((validator, "", error))
 
     max_workers = min(len(available), 5) if parallel else 1
     while pending or active:
