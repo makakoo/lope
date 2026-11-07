@@ -53,10 +53,7 @@ fn command(cmd: &Command) -> Value {
             let mut members: Vec<String> = g
                 .get_args()
                 .map(|id| {
-                    let arg = cmd
-                        .get_arguments()
-                        .find(|a| a.get_id() == id)
-                        .expect("group member exists");
+                    let arg = cmd.get_arguments().find(|a| a.get_id() == id).expect("group member exists");
                     option_key(arg)
                 })
                 .collect();
@@ -65,10 +62,8 @@ fn command(cmd: &Command) -> Value {
         })
         .collect();
     groups.sort_by_key(|g| g["members"].to_string());
-    let subcommands: Map<String, Value> = cmd
-        .get_subcommands()
-        .map(|s| (s.get_name().to_string(), command(s)))
-        .collect();
+    let subcommands: Map<String, Value> =
+        cmd.get_subcommands().map(|s| (s.get_name().to_string(), command(s))).collect();
     json!({
         "name": cmd.get_name(),
         "aliases": aliases,
@@ -88,17 +83,10 @@ fn accepts_abbreviations(cmd: &Command) -> bool {
     let longs: Vec<String> = cmd
         .get_arguments()
         .filter(|a| !a.is_positional())
-        .flat_map(|a| {
-            a.get_long()
-                .into_iter()
-                .chain(a.get_all_aliases().unwrap_or_default())
-                .map(|l| format!("--{l}"))
-        })
+        .flat_map(|a| a.get_long().into_iter().chain(a.get_all_aliases().unwrap_or_default()).map(|l| format!("--{l}")))
         .collect();
     let probe = longs.iter().map(|l| &l[..l.len() - 1]).find(|p| {
-        p.len() > 2
-            && longs.iter().filter(|l| l.starts_with(p)).count() == 1
-            && !longs.iter().any(|l| l == p)
+        p.len() > 2 && longs.iter().filter(|l| l.starts_with(p)).count() == 1 && !longs.iter().any(|l| l == p)
     });
     let Some(probe) = probe else { return false };
     match cmd.clone().try_get_matches_from([cmd.get_name(), probe]) {
@@ -127,11 +115,7 @@ fn option_key(a: &Arg) -> String {
 
 fn arity(a: &Arg) -> Value {
     let r = a.get_num_args().unwrap_or_else(|| ValueRange::new(0..=0));
-    let max = if r.max_values() == usize::MAX {
-        Value::Null
-    } else {
-        json!(r.max_values())
-    };
+    let max = if r.max_values() == usize::MAX { Value::Null } else { json!(r.max_values()) };
     json!([r.min_values(), max])
 }
 
@@ -178,19 +162,12 @@ fn choices(a: &Arg) -> Value {
     if pv.is_empty() || !a.get_action().takes_values() {
         Value::Null
     } else {
-        json!(pv
-            .iter()
-            .map(|p| p.get_name().to_string())
-            .collect::<Vec<_>>())
+        json!(pv.iter().map(|p| p.get_name().to_string()).collect::<Vec<_>>())
     }
 }
 
 fn option(a: &Arg) -> Value {
-    let arity = if a.get_action().takes_values() {
-        arity(a)
-    } else {
-        json!([0, 0])
-    };
+    let arity = if a.get_action().takes_values() { arity(a) } else { json!([0, 0]) };
     json!({
         "kind": kind(a),
         "arity": arity,
@@ -202,15 +179,7 @@ fn option(a: &Arg) -> Value {
 
 fn positional(a: &Arg) -> Value {
     let r = a.get_num_args().unwrap_or_else(|| ValueRange::new(1..=1));
-    let min = if a.is_required_set() {
-        r.min_values()
-    } else {
-        0
-    };
-    let max = if r.max_values() == usize::MAX {
-        Value::Null
-    } else {
-        json!(r.max_values())
-    };
+    let min = if a.is_required_set() { r.min_values() } else { 0 };
+    let max = if r.max_values() == usize::MAX { Value::Null } else { json!(r.max_values()) };
     json!({ "arity": [min, max], "type": value_type(a), "choices": choices(a) })
 }

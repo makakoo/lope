@@ -72,11 +72,7 @@ impl OptSpec {
     /// short one. Option ids start with `-`, so they never collide with
     /// positional ids (the argparse dest).
     pub fn id(&self) -> &'static str {
-        self.option_strings
-            .iter()
-            .find(|o| o.starts_with("--"))
-            .copied()
-            .unwrap_or(self.option_strings[0])
+        self.option_strings.iter().find(|o| o.starts_with("--")).copied().unwrap_or(self.option_strings[0])
     }
 
     pub fn arity(&self) -> (usize, Option<usize>) {
@@ -123,9 +119,7 @@ pub struct CommandSpec {
 impl CommandSpec {
     /// Subcommand by name or alias.
     pub fn subcommand(&self, name: &str) -> Option<&'static CommandSpec> {
-        self.subcommands
-            .iter()
-            .find(|c| c.name == name || c.aliases.contains(&name))
+        self.subcommands.iter().find(|c| c.name == name || c.aliases.contains(&name))
     }
 
     pub fn option_by_string(&self, s: &str) -> Option<&'static OptSpec> {
@@ -133,9 +127,7 @@ impl CommandSpec {
     }
 
     pub fn option_strings(&self) -> impl Iterator<Item = (&'static str, &'static OptSpec)> {
-        self.options
-            .iter()
-            .flat_map(|o| o.option_strings.iter().map(move |s| (*s, o)))
+        self.options.iter().flat_map(|o| o.option_strings.iter().map(move |s| (*s, o)))
     }
 }
 
@@ -155,11 +147,7 @@ mod tests {
     #[test]
     fn grammar_has_all_23_verbs() {
         assert_eq!(ROOT.subcommands.len(), 23);
-        assert_eq!(
-            GRAMMAR_LOPE_VERSION,
-            lope_core::COMPAT_VERSION,
-            "grammar capture and COMPAT_VERSION disagree"
-        );
+        assert_eq!(GRAMMAR_LOPE_VERSION, lope_core::COMPAT_VERSION, "grammar capture and COMPAT_VERSION disagree");
     }
 
     #[test]
@@ -170,18 +158,9 @@ mod tests {
         }
         // Two separate store_true actions sharing dest `consensus`, not aliases.
         let structured = review.option_by_string("--structured").unwrap();
-        assert_eq!(
-            (structured.id(), structured.dest),
-            ("--structured", "consensus")
-        );
-        assert!(verb("negotiate")
-            .unwrap()
-            .option_by_string("--max-rounds")
-            .is_some());
-        assert!(verb("negotiate")
-            .unwrap()
-            .option_by_string("--rounds")
-            .is_none());
+        assert_eq!((structured.id(), structured.dest), ("--structured", "consensus"));
+        assert!(verb("negotiate").unwrap().option_by_string("--max-rounds").is_some());
+        assert!(verb("negotiate").unwrap().option_by_string("--rounds").is_none());
     }
 
     #[test]

@@ -11,12 +11,7 @@ fn main() {
         Some("--coverage") => {
             println!("fingerprint {}", lope_compat::coverage::fingerprint());
             for c in lope_compat::coverage::COVERAGE {
-                println!(
-                    "{:<8} lope {:<24} args: [{}]",
-                    c.since,
-                    c.path.join(" "),
-                    c.args.join(", ")
-                );
+                println!("{:<8} lope {:<24} args: [{}]", c.since, c.path.join(" "), c.args.join(", "));
             }
         }
         Some(other) => {

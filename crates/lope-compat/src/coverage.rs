@@ -14,20 +14,22 @@ pub struct Coverage {
     pub since: &'static str,
 }
 
-pub static COVERAGE: &[Coverage] = &[Coverage {
-    path: &["version"],
-    args: &[],
-    since: "S0",
-}];
+pub static COVERAGE: &[Coverage] = &[
+    Coverage { path: &["version"], args: &[], since: "S0" },
+    Coverage { path: &["status"], args: &[], since: "S1" },
+    Coverage { path: &["jobs"], args: &[], since: "S1" },
+    Coverage { path: &["jobs", "list"], args: &["--json"], since: "S1" },
+    Coverage { path: &["jobs", "reap"], args: &["--dry-run", "--stale", "--json"], since: "S1" },
+    Coverage { path: &["jobs", "prune"], args: &["--stale", "--dry-run", "--json"], since: "S1" },
+    Coverage { path: &["jobs", "kill"], args: &["run_id", "--json"], since: "S1" },
+];
 
 pub fn verb_has_coverage(verb: &str) -> bool {
     COVERAGE.iter().any(|c| c.path.first() == Some(&verb))
 }
 
 pub fn is_covered(path: &[&str], present: &[&str]) -> bool {
-    COVERAGE
-        .iter()
-        .any(|c| c.path == path && present.iter().all(|a| c.args.contains(a)))
+    COVERAGE.iter().any(|c| c.path == path && present.iter().all(|a| c.args.contains(a)))
 }
 
 /// Stable identity of the table, recorded in docs/evidence at each sprint end
@@ -42,9 +44,7 @@ pub fn fingerprint() -> String {
         canonical.push_str(&args.join(","));
         canonical.push('\n');
     }
-    let h = canonical.bytes().fold(0xcbf29ce484222325u64, |h, b| {
-        (h ^ b as u64).wrapping_mul(0x100000001b3)
-    });
+    let h = canonical.bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3));
     format!("fnv64:{h:016x}")
 }
 
@@ -58,17 +58,11 @@ mod tests {
         for c in COVERAGE {
             let mut spec = &grammar::ROOT;
             for name in c.path {
-                spec = spec
-                    .subcommand(name)
-                    .unwrap_or_else(|| panic!("{:?} not in grammar", c.path));
-                assert_eq!(
-                    spec.name, *name,
-                    "coverage must use canonical names, not aliases"
-                );
+                spec = spec.subcommand(name).unwrap_or_else(|| panic!("{:?} not in grammar", c.path));
+                assert_eq!(spec.name, *name, "coverage must use canonical names, not aliases");
             }
             for a in c.args {
-                let known = spec.options.iter().any(|o| o.id() == *a)
-                    || spec.positionals.iter().any(|p| p.dest == *a);
+                let known = spec.options.iter().any(|o| o.id() == *a) || spec.positionals.iter().any(|p| p.dest == *a);
                 assert!(known, "{:?}: unknown arg {a}", c.path);
             }
         }
@@ -79,5 +73,6 @@ mod tests {
         assert!(is_covered(&["version"], &[]));
         assert!(!is_covered(&["version"], &["--help"]));
         assert!(!is_covered(&["review"], &[]));
+        assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
     }
 }

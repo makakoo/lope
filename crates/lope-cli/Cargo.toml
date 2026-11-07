@@ -13,6 +13,9 @@ path = "src/main.rs"
 [dependencies]
 lope-core.workspace = true
 lope-compat.workspace = true
+lope-state.workspace = true
+serde_json.workspace = true
+clap.workspace = true
 
 [dev-dependencies]
 tempfile.workspace = true

@@ -119,11 +119,7 @@ fn classify(spec: &'static CommandSpec, raw: &OsStr, alias: Alias) -> Token {
                 }
             }
         } else {
-            let short_prefix = &arg[..arg
-                .char_indices()
-                .nth(2)
-                .map(|(i, _)| i)
-                .unwrap_or(arg.len())];
+            let short_prefix = &arg[..arg.char_indices().nth(2).map(|(i, _)| i).unwrap_or(arg.len())];
             for (s, o) in all {
                 if s == short_prefix {
                     matches.push((o, arg.len() > short_prefix.len()));
@@ -157,9 +153,7 @@ fn is_negative_number(s: &str) -> bool {
     }
     match rest.split_once('.') {
         Some((int, frac)) => {
-            int.bytes().all(|b| b.is_ascii_digit())
-                && !frac.is_empty()
-                && frac.bytes().all(|b| b.is_ascii_digit())
+            int.bytes().all(|b| b.is_ascii_digit()) && !frac.is_empty() && frac.bytes().all(|b| b.is_ascii_digit())
         }
         None => false,
     }
@@ -199,10 +193,7 @@ fn roles(args: &[OsString], spec: &'static CommandSpec, alias: Alias) -> Vec<Rol
                     _ => 0,
                 };
                 let mut taken = 0;
-                while taken < max
-                    && i + 1 < args.len()
-                    && classify(spec, &args[i + 1], alias) == Token::Arg
-                {
+                while taken < max && i + 1 < args.len() && classify(spec, &args[i + 1], alias) == Token::Arg {
                     i += 1;
                     taken += 1;
                     out.push(Role::Value);
@@ -214,10 +205,7 @@ fn roles(args: &[OsString], spec: &'static CommandSpec, alias: Alias) -> Vec<Rol
     out
 }
 
-fn consensus_quorum(
-    args: &mut Vec<OsString>,
-    spec: &'static CommandSpec,
-) -> Result<usize, UsageError> {
+fn consensus_quorum(args: &mut Vec<OsString>, spec: &'static CommandSpec) -> Result<usize, UsageError> {
     let mut removed = 0;
     loop {
         let r = roles(args, spec, None);
@@ -246,9 +234,7 @@ fn consensus_quorum(
 }
 
 fn negotiate_rounds(args: &mut [OsString], spec: &'static CommandSpec) -> usize {
-    let max_rounds = spec
-        .option_by_string("--max-rounds")
-        .expect("--max-rounds in grammar");
+    let max_rounds = spec.option_by_string("--max-rounds").expect("--max-rounds in grammar");
     let r = roles(args, spec, Some(("--rounds", max_rounds)));
     let mut n = 0;
     for (i, role) in r.iter().enumerate() {
@@ -261,8 +247,7 @@ fn negotiate_rounds(args: &mut [OsString], spec: &'static CommandSpec) -> usize 
         let replaced = if tok == "--rounds" {
             Some("--max-rounds".to_string())
         } else {
-            tok.strip_prefix("--rounds=")
-                .map(|v| format!("--max-rounds={v}"))
+            tok.strip_prefix("--rounds=").map(|v| format!("--max-rounds={v}"))
         };
         if let Some(new) = replaced {
             args[i] = OsString::from(new);
@@ -288,10 +273,7 @@ mod tests {
     fn version_flags() {
         assert_eq!(norm(&["--version"]).unwrap(), ["version"]);
         assert_eq!(norm(&["-V"]).unwrap(), ["version"]);
-        assert_eq!(
-            norm(&["review", "--version"]).unwrap(),
-            ["review", "--version"]
-        );
+        assert_eq!(norm(&["review", "--version"]).unwrap(), ["review", "--version"]);
         assert_eq!(norm(&["-h", "--version"]).unwrap(), ["-h", "--version"]);
     }
 
@@ -299,15 +281,7 @@ mod tests {
     fn glimmer_council_runner_argv() {
         // council-runner.ts:79
         assert_eq!(
-            norm(&[
-                "review",
-                "notes.md",
-                "--consensus",
-                "quorum",
-                "--format",
-                "markdown"
-            ])
-            .unwrap(),
+            norm(&["review", "notes.md", "--consensus", "quorum", "--format", "markdown"]).unwrap(),
             ["review", "notes.md", "--consensus", "--format", "markdown"]
         );
         assert_eq!(
@@ -318,10 +292,7 @@ mod tests {
 
     #[test]
     fn quorum_kept_when_it_is_the_file() {
-        assert_eq!(
-            norm(&["review", "--consensus", "quorum"]).unwrap(),
-            ["review", "--consensus", "quorum"]
-        );
+        assert_eq!(norm(&["review", "--consensus", "quorum"]).unwrap(), ["review", "--consensus", "quorum"]);
         // `--focus` consumes `x.md`, so `quorum` is the only positional.
         assert_eq!(
             norm(&["review", "--focus", "x.md", "--consensus", "quorum"]).unwrap(),
@@ -352,45 +323,21 @@ mod tests {
             assert!(err.message.contains(mode));
         }
         // ... but only in the quorum position
-        assert_eq!(
-            norm(&["review", "--consensus", "any"]).unwrap(),
-            ["review", "--consensus", "any"]
-        );
+        assert_eq!(norm(&["review", "--consensus", "any"]).unwrap(), ["review", "--consensus", "any"]);
     }
 
     #[test]
     fn negotiate_rounds_alias() {
         // plan-build.ts:135
         assert_eq!(
-            norm(&[
-                "negotiate",
-                "goal",
-                "--domain",
-                "engineering",
-                "--rounds",
-                "3"
-            ])
-            .unwrap(),
-            [
-                "negotiate",
-                "goal",
-                "--domain",
-                "engineering",
-                "--max-rounds",
-                "3"
-            ]
+            norm(&["negotiate", "goal", "--domain", "engineering", "--rounds", "3"]).unwrap(),
+            ["negotiate", "goal", "--domain", "engineering", "--max-rounds", "3"]
         );
-        assert_eq!(
-            norm(&["negotiate", "g", "--rounds=2"]).unwrap(),
-            ["negotiate", "g", "--max-rounds=2"]
-        );
+        assert_eq!(norm(&["negotiate", "g", "--rounds=2"]).unwrap(), ["negotiate", "g", "--max-rounds=2"]);
         // argparse never takes an option-looking token as a value, so this is
         // still the alias (Python errors on the missing --context value either way)
         let args = ["negotiate", "g", "--context", "--rounds"];
-        assert_eq!(
-            norm(&args).unwrap(),
-            ["negotiate", "g", "--context", "--max-rounds"]
-        );
+        assert_eq!(norm(&args).unwrap(), ["negotiate", "g", "--context", "--max-rounds"]);
         // inline value of another option, or after `--`: untouched
         let args = ["negotiate", "g", "--context=--rounds"];
         assert_eq!(norm(&args).unwrap(), args);

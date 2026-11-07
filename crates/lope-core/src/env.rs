@@ -5,10 +5,7 @@
 /// call sites differ on that, and these flags are Super Lope's own.
 pub fn truthy(value: Option<&str>) -> bool {
     match value {
-        Some(v) => matches!(
-            v.trim().to_ascii_lowercase().as_str(),
-            "1" | "true" | "yes" | "on"
-        ),
+        Some(v) => matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"),
         None => false,
     }
 }
@@ -18,8 +15,7 @@ pub fn flag(name: &str) -> bool {
 }
 
 /// Message printed by the nesting guard (FR4, `cli.py:189`), byte for byte.
-pub const NESTED_MESSAGE: &str =
-    "error: nested Lope orchestration is disabled inside an implementation writer";
+pub const NESTED_MESSAGE: &str = "error: nested Lope orchestration is disabled inside an implementation writer";
 
 /// FR4: `LOPE_IMPLEMENTATION_DEPTH` (default `"0"`) means "nested" when Python's
 /// `int(value) > 0`, or when `int()` raises.
@@ -77,9 +73,7 @@ mod tests {
         for v in ["0", "00", " 0 ", "-1", "-0", "+0", "0_0", "\t0\n"] {
             assert!(!nested(v), "{v:?} should not be nested");
         }
-        for v in [
-            "1", " 2 ", "+3", "1_0", "", " ", "x", "1.0", "1__0", "_1", "1_", "0x1", "--1", "١",
-        ] {
+        for v in ["1", " 2 ", "+3", "1_0", "", " ", "x", "1.0", "1__0", "_1", "1_", "0x1", "--1", "١"] {
             assert!(nested(v), "{v:?} should be nested");
         }
     }

@@ -16,18 +16,8 @@ fn main() {
     assert_eq!(doc["schema"], 1, "unsupported grammar schema");
 
     let mut out = String::new();
-    writeln!(
-        out,
-        "pub const GRAMMAR_LOPE_VERSION: &str = {:?};",
-        s(&doc["lope_version"])
-    )
-    .unwrap();
-    writeln!(
-        out,
-        "pub const GRAMMAR_FNV64: u64 = {:#018x};",
-        fnv64(text.as_bytes())
-    )
-    .unwrap();
+    writeln!(out, "pub const GRAMMAR_LOPE_VERSION: &str = {:?};", s(&doc["lope_version"])).unwrap();
+    writeln!(out, "pub const GRAMMAR_FNV64: u64 = {:#018x};", fnv64(text.as_bytes())).unwrap();
     out.push_str("pub static ROOT: CommandSpec = ");
     command(&mut out, "lope", &[], None, &doc["parser"]);
     out.push_str(";\n");
@@ -37,14 +27,11 @@ fn main() {
 }
 
 fn fnv64(bytes: &[u8]) -> u64 {
-    bytes.iter().fold(0xcbf29ce484222325u64, |h, b| {
-        (h ^ *b as u64).wrapping_mul(0x100000001b3)
-    })
+    bytes.iter().fold(0xcbf29ce484222325u64, |h, b| (h ^ *b as u64).wrapping_mul(0x100000001b3))
 }
 
 fn s(v: &Value) -> &str {
-    v.as_str()
-        .unwrap_or_else(|| panic!("expected string, got {v}"))
+    v.as_str().unwrap_or_else(|| panic!("expected string, got {v}"))
 }
 
 fn opt_str(v: &Value) -> String {
@@ -61,17 +48,10 @@ fn str_slice(items: impl IntoIterator<Item = String>) -> String {
 }
 
 fn command(out: &mut String, name: &str, aliases: &[String], help: Option<&Value>, p: &Value) {
-    assert_eq!(
-        s(&p["prefix_chars"]),
-        "-",
-        "unsupported prefix_chars in {name}"
-    );
+    assert_eq!(s(&p["prefix_chars"]), "-", "unsupported prefix_chars in {name}");
     let (subs, subs_required) = match &p["subcommands"] {
         Value::Null => (Vec::new(), false),
-        sc => (
-            sc["commands"].as_array().unwrap().clone(),
-            sc["required"].as_bool().unwrap(),
-        ),
+        sc => (sc["commands"].as_array().unwrap().clone(), sc["required"].as_bool().unwrap()),
     };
     write!(
         out,
@@ -93,11 +73,7 @@ fn command(out: &mut String, name: &str, aliases: &[String], help: Option<&Value
     }
     out.push_str("], mutex_groups: &[");
     for g in p["mutex_groups"].as_array().unwrap() {
-        let members = g["members"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|m| s(m).to_string());
+        let members = g["members"].as_array().unwrap().iter().map(|m| s(m).to_string());
         write!(
             out,
             "MutexSpec {{ required: {}, members: {} }}, ",
@@ -108,12 +84,7 @@ fn command(out: &mut String, name: &str, aliases: &[String], help: Option<&Value
     }
     out.push_str("], subcommands: &[");
     for c in &subs {
-        let aliases: Vec<String> = c["aliases"]
-            .as_array()
-            .unwrap()
-            .iter()
-            .map(|a| s(a).to_string())
-            .collect();
+        let aliases: Vec<String> = c["aliases"].as_array().unwrap().iter().map(|a| s(a).to_string()).collect();
         command(out, s(&c["name"]), &aliases, Some(&c["help"]), &c["parser"]);
         out.push_str(", ");
     }
@@ -177,19 +148,11 @@ fn choices(a: &Value, ctx: &str) -> String {
 }
 
 fn option(out: &mut String, cmd: &str, a: &Value) {
-    let strings: Vec<String> = a["option_strings"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|o| s(o).to_string())
-        .collect();
+    let strings: Vec<String> = a["option_strings"].as_array().unwrap().iter().map(|o| s(o).to_string()).collect();
     let ctx = format!("{cmd} {}", strings.join("/"));
     for o in &strings {
         let ok = (o.starts_with("--") && o.len() > 2) || (o.len() == 2 && o.starts_with('-'));
-        assert!(
-            ok,
-            "{ctx}: option string {o:?} has no clap equivalent; extend lope-compat"
-        );
+        assert!(ok, "{ctx}: option string {o:?} has no clap equivalent; extend lope-compat");
     }
     write!(
         out,

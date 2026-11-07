@@ -15,10 +15,7 @@ pub const SYSTEM_PYTHON: &str = "/usr/bin/python3";
 
 /// Interpreter: `LOPE_PYTHON`, then `/usr/bin/python3`, then `python3` on PATH.
 pub fn interpreter() -> OsString {
-    interpreter_from(
-        std::env::var_os("LOPE_PYTHON"),
-        Path::new(SYSTEM_PYTHON).is_file(),
-    )
+    interpreter_from(std::env::var_os("LOPE_PYTHON"), Path::new(SYSTEM_PYTHON).is_file())
 }
 
 pub fn interpreter_from(lope_python: Option<OsString>, system_python_exists: bool) -> OsString {
@@ -32,10 +29,7 @@ pub fn interpreter_from(lope_python: Option<OsString>, system_python_exists: boo
 /// The command that delegation execs (also used by tests to spawn instead).
 pub fn command(args: &[OsString]) -> Command {
     let mut cmd = Command::new(interpreter());
-    cmd.arg("-m")
-        .arg("lope")
-        .args(args)
-        .env("PYTHONPATH", paths::lope_home());
+    cmd.arg("-m").arg("lope").args(args).env("PYTHONPATH", paths::lope_home());
     cmd
 }
 

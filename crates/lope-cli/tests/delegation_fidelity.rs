@@ -24,8 +24,5 @@ fn a2_delegation_corpus_matches_direct_python() {
     let report = String::from_utf8_lossy(&out.stdout);
     println!("{report}");
     eprintln!("{}", String::from_utf8_lossy(&out.stderr));
-    assert!(
-        out.status.success(),
-        "A2 delegation corpus has mismatches:\n{report}"
-    );
+    assert!(out.status.success(), "A2 delegation corpus has mismatches:\n{report}");
 }

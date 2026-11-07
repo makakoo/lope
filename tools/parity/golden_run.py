@@ -59,11 +59,12 @@ MASKS = [
     (re.compile(r'"(duration|elapsed|latency|seconds|wall|started|finished|created|updated|pid|pgid)[a-z_]*":\s*[-0-9.e]+'), r'"\1":<N>'),
     (re.compile(r"\bpid[ =:]\s*\d+\b"), "pid <PID>"),
     (re.compile(r"ps:\w{3} \w{3} +\d+ \d{2}:\d{2}:\d{2} \d{4}"), "ps:<START>"),
+    (re.compile(r"\b(owner|cpu|rss|deadline)=-?[\d.]+"), r"\1=<N>"),
     (re.compile(r"\b[0-9a-f]{16,64}\b"), "<HEX>"),
 ]
 
 
-VOLATILE_INT_KEYS = {"pid", "pgid", "ppid"}
+VOLATILE_INT_KEYS = {"pid", "pgid", "ppid", "pids", "rss_bytes"}
 
 
 def mask_json(value, key=None):
@@ -112,6 +113,33 @@ def tracked_top_level(src):
     return sorted({line.split("/", 1)[0] for line in out.splitlines() if line})
 
 
+SETUP_PRELUDE = """
+import os, sys, json, time, signal, subprocess
+BASE = os.environ["GOLDEN_BASE"]
+def spawn(*argv):
+    p = subprocess.Popen(list(argv) or ["sleep", "600"], stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                         stderr=subprocess.DEVNULL, start_new_session=True)
+    with open(os.path.join(BASE, "pids.txt"), "a") as f:
+        f.write("%d\\n" % p.pid)
+    return p
+def dead_pid():
+    p = subprocess.Popen(["sleep", "600"], start_new_session=True)
+    return p
+"""
+
+
+def teardown(base):
+    path = os.path.join(base, "pids.txt")
+    if not os.path.exists(path):
+        return
+    for line in open(path).read().split():
+        try:
+            os.killpg(int(line), 9)
+        except (ProcessLookupError, PermissionError, ValueError):
+            pass
+    os.unlink(path)
+
+
 def build_sandbox(base, case, src, entries):
     if os.path.exists(base):
         shutil.rmtree(base)
@@ -158,19 +186,36 @@ def run_side(side, base, case, lope_bin):
     env.update(case.get("env", {}))
     if side == "rust":
         argv = [lope_bin] + case["argv"]
+        env["LOPE_ROUTER_TRACE"] = "1"
     else:
         env["PYTHONPATH"] = env["LOPE_HOME"]
         argv = [PYTHON, "-m", "lope"] + case.get("python_argv", case["argv"])
+    if case.get("setup_py"):
+        # Fixture setup with Python Lope's own APIs; may start helper
+        # processes, whose pids go to <base>/pids.txt for teardown.
+        setup_env = dict(env, PYTHONPATH=env["LOPE_HOME"], GOLDEN_BASE=base)
+        subprocess.run([PYTHON, "-c", SETUP_PRELUDE + case["setup_py"]], cwd=os.path.join(base, "work"),
+                       env=setup_env, check=True, timeout=60)
     stdin = case.get("stdin")
     t0 = time.monotonic()
     p = subprocess.run(
         argv, cwd=os.path.join(base, "work"), env=env,
         input=(stdin or "").encode(), capture_output=True, timeout=case.get("timeout", 120),
     )
+    teardown(base)
+    stderr = p.stderr.decode("utf-8", "replace")
+    route = None
+    if side == "rust":
+        # The router's trace line is the first stderr line; record and strip it.
+        first, _, rest = stderr.partition("\n")
+        if first.startswith("lope-router: "):
+            route = first.split()[1]
+            stderr = rest
     return {
         "exit": p.returncode,
+        "route": route,
         "stdout": p.stdout.decode("utf-8", "replace"),
-        "stderr": p.stderr.decode("utf-8", "replace"),
+        "stderr": stderr,
         "seconds": time.monotonic() - t0,
         "snapshot": snapshot(base),
     }
@@ -211,14 +256,23 @@ TIMER_LINES = re.compile(r"^heartbeat: .*$\n?", re.M)
 
 
 def normalise_stream(stream, text):
+    stripped = text.strip()
+    if stream == "stdout" and stripped[:1] in ("{", "["):
+        try:
+            return json.dumps(mask_json(json.loads(stripped)), sort_keys=True, indent=1)
+        except ValueError:
+            pass
     text = mask(text)
     if stream == "stderr":
         text = TIMER_LINES.sub("", text)
     return text
 
 
-def compare(case, rust, py):
+def compare(case, rust, py, default_route=None):
     problems = []
+    want_route = case.get("route", default_route)
+    if want_route and rust["route"] != want_route:
+        problems.append("route: expected %s, rust took %s" % (want_route, rust["route"]))
     if rust["exit"] != py["exit"]:
         problems.append("exit: rust=%s python=%s" % (rust["exit"], py["exit"]))
     for stream in ("stdout", "stderr"):
@@ -293,14 +347,14 @@ def main():
                 rust = run_side("rust", base, case, args.lope)
                 build_sandbox(base, case, src, entries)
                 py = run_side("python", base, case, args.lope)
-                problems = compare(case, rust, py)
+                problems = compare(case, rust, py, corpus.get("default_route"))
                 if not problems:
                     break
             status = "PASS" if not problems else "FAIL"
             failures += bool(problems)
             flaky_python = any("closeout warning" in r["stderr"] for r in (rust, py))
-            print("%-4s %-34s exit=%-3s files=%-3d rust=%.2fs python=%.2fs attempt=%d%s" % (
-                status, case["name"], rust["exit"], len(rust["snapshot"]), rust["seconds"], py["seconds"],
+            print("%-4s %-34s %-8s exit=%-3s files=%-3d rust=%.2fs python=%.2fs attempt=%d%s" % (
+                status, case["name"], rust["route"], rust["exit"], len(rust["snapshot"]), rust["seconds"], py["seconds"],
                 attempt, " (python closeout warning seen)" if flaky_python else ""))
             for p in problems:
                 print("     " + p.replace("\n", "\n     "))

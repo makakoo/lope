@@ -4,9 +4,16 @@
 //! S0 provides only what the router needs. Config, models, redaction and the
 //! verdict parser arrive in S1.
 
+pub mod config;
 pub mod env;
 pub mod exit;
+pub mod journal;
+pub mod logo;
+pub mod output;
 pub mod paths;
+pub mod pyjson;
+pub mod redaction;
+pub mod time;
 
 /// Product version (OQ-3 default: `2.0.0`).
 pub const PRODUCT_VERSION: &str = env!("CARGO_PKG_VERSION");

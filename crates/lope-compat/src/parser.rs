@@ -10,9 +10,7 @@ use clap::{Arg, ArgAction, ArgGroup, Command};
 use std::ffi::OsString;
 
 /// clap ids must be `'static` without the `string` feature.
-const MUTEX_IDS: [&str; 8] = [
-    "mutex-0", "mutex-1", "mutex-2", "mutex-3", "mutex-4", "mutex-5", "mutex-6", "mutex-7",
-];
+const MUTEX_IDS: [&str; 8] = ["mutex-0", "mutex-1", "mutex-2", "mutex-3", "mutex-4", "mutex-5", "mutex-6", "mutex-7"];
 
 /// Build the clap command for one argparse parser (recursively).
 pub fn build(spec: &'static CommandSpec) -> Command {
@@ -40,19 +38,9 @@ pub fn build(spec: &'static CommandSpec) -> Command {
         cmd = cmd.arg(positional(p, i + 1));
     }
     for (i, g) in spec.mutex_groups.iter().enumerate() {
-        let ids = g
-            .members
-            .iter()
-            .map(|m| spec.option_by_string(m).map(OptSpec::id).unwrap_or(m));
-        let id = *MUTEX_IDS
-            .get(i)
-            .expect("more mutex groups than MUTEX_IDS; extend it");
-        cmd = cmd.group(
-            ArgGroup::new(id)
-                .args(ids)
-                .multiple(false)
-                .required(g.required),
-        );
+        let ids = g.members.iter().map(|m| spec.option_by_string(m).map(OptSpec::id).unwrap_or(m));
+        let id = *MUTEX_IDS.get(i).expect("more mutex groups than MUTEX_IDS; extend it");
+        cmd = cmd.group(ArgGroup::new(id).args(ids).multiple(false).required(g.required));
     }
     for s in spec.subcommands {
         cmd = cmd.subcommand(build(s));
@@ -89,31 +77,19 @@ fn option(o: &'static OptSpec) -> Option<Arg> {
     }
     let mut arg = Arg::new(o.id()).required(o.required);
     let mut longs = o.option_strings.iter().filter_map(|s| s.strip_prefix("--"));
-    let mut shorts = o
-        .option_strings
-        .iter()
-        .filter(|s| !s.starts_with("--"))
-        .map(|s| s.chars().nth(1).expect("short option"));
+    let mut shorts =
+        o.option_strings.iter().filter(|s| !s.starts_with("--")).map(|s| s.chars().nth(1).expect("short option"));
     if let Some(l) = longs.next() {
         arg = arg.long(l);
     }
     if let Some(s) = shorts.next() {
         arg = arg.short(s);
     }
-    arg = arg
-        .visible_aliases(longs.collect::<Vec<_>>())
-        .visible_short_aliases(shorts.collect::<Vec<_>>());
+    arg = arg.visible_aliases(longs.collect::<Vec<_>>()).visible_short_aliases(shorts.collect::<Vec<_>>());
     arg = match o.kind {
         Kind::Store | Kind::Append => {
-            let action = if o.kind == Kind::Store {
-                ArgAction::Set
-            } else {
-                ArgAction::Append
-            };
-            let arg = arg
-                .action(action)
-                .value_parser(value_parser(o.ty, o.choices))
-                .allow_negative_numbers(true);
+            let action = if o.kind == Kind::Store { ArgAction::Set } else { ArgAction::Append };
+            let arg = arg.action(action).value_parser(value_parser(o.ty, o.choices)).allow_negative_numbers(true);
             let arg = arg.value_name(o.metavar.unwrap_or(o.dest));
             apply_nargs(arg, o.nargs)
         }
@@ -158,10 +134,7 @@ pub struct Invocation {
 /// Parse normalised argv (without the program name). Builds only the subtree
 /// of the requested verb, to keep router overhead low.
 pub fn parse(args: &[OsString]) -> Result<Invocation, clap::Error> {
-    let verb = args
-        .first()
-        .and_then(|a| a.to_str())
-        .and_then(grammar::verb);
+    let verb = args.first().and_then(|a| a.to_str()).and_then(grammar::verb);
     let root = Command::new("lope")
         .disable_help_subcommand(true)
         .disable_version_flag(true)
@@ -186,11 +159,7 @@ pub fn parse(args: &[OsString]) -> Result<Invocation, clap::Error> {
         .filter(|id| !id.as_str().starts_with("mutex-"))
         .map(|id| id.as_str().to_string())
         .collect();
-    Ok(Invocation {
-        path,
-        present,
-        matches: cur.clone(),
-    })
+    Ok(Invocation { path, present, matches: cur.clone() })
 }
 
 #[cfg(test)]
@@ -213,32 +182,18 @@ mod tests {
         let mut present = inv.present.clone();
         present.sort();
         assert_eq!(present, ["--consensus", "--format", "file"]);
-        let inv = p(&[
-            "negotiate",
-            "g",
-            "--domain",
-            "engineering",
-            "--max-rounds",
-            "3",
-        ])
-        .unwrap();
+        let inv = p(&["negotiate", "g", "--domain", "engineering", "--max-rounds", "3"]).unwrap();
         assert_eq!(inv.matches.get_one::<i64>("--max-rounds"), Some(&3));
     }
 
     #[test]
     fn aliases_abbreviations_and_nesting() {
-        assert_eq!(
-            p(&["flow", "lint", "x.dot"]).unwrap().path,
-            ["flow", "validate"]
-        );
+        assert_eq!(p(&["flow", "lint", "x.dot"]).unwrap().path, ["flow", "validate"]);
         let inv = p(&["review", "f.md", "--structured", "-o", "r.md"]).unwrap();
         let mut present = inv.present;
         present.sort();
         assert_eq!(present, ["--output", "--structured", "file"]);
-        assert!(p(&["review", "f.md", "--form", "json"])
-            .unwrap()
-            .present
-            .contains(&"--format".to_string()));
+        assert!(p(&["review", "f.md", "--form", "json"]).unwrap().present.contains(&"--format".to_string()));
         assert_eq!(p(&["jobs", "list"]).unwrap().path, ["jobs", "list"]);
     }
 
@@ -248,13 +203,8 @@ mod tests {
         assert!(p(&["review", "f.md", "--format", "yaml"]).is_err()); // bad choice
         assert!(p(&["version", "--help"]).is_err()); // help is Python's
         assert!(p(&["bogus"]).is_err());
-        assert!(p(&[
-            "review",
-            "f.md",
-            "--run-timeout",
-            "5",
-            "--allow-unbounded-run"
-        ])
-        .is_err()); // mutex
+        assert!(p(&["review", "f.md", "--run-timeout", "5", "--allow-unbounded-run"]).is_err());
+        // mutex
     }
 }
+

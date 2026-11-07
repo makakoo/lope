@@ -134,7 +134,7 @@ rules_file = "~/.lope/super-lope/blocker-rules.toml"
 
 ## 5. State contracts
 
-- **`~/.lope/runs/`**: `active/`, `completed/`, `work/`, `registry.lock`. Manifest schema is Python's (`jobs.py`), with forbidden keys per NFR5. Rust adds only the FR11 cleanup metadata and FR12 diagnostics fields. **Unverified:** whether Python's registry tolerates extra manifest fields. A4 must prove it before Rust writes any extra field. If it does not, the extra data goes in the `.diag` sidecar instead.
+- **`~/.lope/runs/`**: `active/`, `completed/`, `work/`, `registry.lock`. Manifest schema is Python's (`jobs.py`), with forbidden keys per NFR5. Rust adds only the FR11 cleanup metadata and FR12 diagnostics fields. **Verified in S1 (A4):** Python's registry lists, reaps and closes manifests that carry extra Rust-only fields. Diagnostics still live primarily in `.diag` sidecars under `runs/diag/` (outside `runs/work/<run>`, so Python's closeout never sees them).
 - **`run.lock`**: Python semantics (`runlock.py`).
 - **`memory.db`**: [`python-lope-memory-db-schema.sql`](../reference/python-lope-memory-db-schema.sql), `user_version = 1`. Located at `$LOPE_MEMORY_DB`, else **`$HOME/.lope/memory.db`, independent of `$LOPE_HOME`** (`memory.py:44-46, 75-82`).
 - **`journal/YYYY_MM_DD.md`** (audit), `journal.jsonl` (heal), `latency.json`, `trusted_gates.json`: Python formats.

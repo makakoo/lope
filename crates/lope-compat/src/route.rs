@@ -30,15 +30,9 @@ impl RouterEnv {
 #[derive(Debug)]
 pub enum Route {
     /// Run natively. `args` is the normalised argv (without program name).
-    Native {
-        invocation: parser::Invocation,
-        args: Vec<OsString>,
-    },
+    Native { invocation: parser::Invocation, args: Vec<OsString> },
     /// Exec Python Lope with the normalised argv.
-    Delegate {
-        args: Vec<OsString>,
-        reason: DelegateReason,
-    },
+    Delegate { args: Vec<OsString>, reason: DelegateReason },
     /// Print `stderr` and exit with `code`, without running anything.
     Exit { code: i32, stderr: String },
 }
@@ -53,32 +47,15 @@ pub enum DelegateReason {
 
 pub fn route(args: Vec<OsString>, renv: &RouterEnv) -> (Route, normalize::Rewrites) {
     if env::implementation_depth_is_nested(renv.implementation_depth.as_deref()) {
-        let r = Route::Exit {
-            code: exit::USAGE,
-            stderr: env::NESTED_MESSAGE.to_string(),
-        };
+        let r = Route::Exit { code: exit::USAGE, stderr: env::NESTED_MESSAGE.to_string() };
         return (r, Default::default());
     }
     let (args, rewrites) = match normalize::normalize(args) {
         Ok(x) => x,
-        Err(e) => {
-            return (
-                Route::Exit {
-                    code: exit::USAGE,
-                    stderr: e.to_string(),
-                },
-                Default::default(),
-            )
-        }
+        Err(e) => return (Route::Exit { code: exit::USAGE, stderr: e.to_string() }, Default::default()),
     };
     if renv.force_python {
-        return (
-            Route::Delegate {
-                args,
-                reason: DelegateReason::ForcedPython,
-            },
-            rewrites,
-        );
+        return (Route::Delegate { args, reason: DelegateReason::ForcedPython }, rewrites);
     }
     let verb = args.first().and_then(|a| a.to_str()).unwrap_or("");
     let reason = if !coverage::verb_has_coverage(verb) {
@@ -88,13 +65,7 @@ pub fn route(args: Vec<OsString>, renv: &RouterEnv) -> (Route, normalize::Rewrit
             Ok(inv) => {
                 let present: Vec<&str> = inv.present.iter().map(String::as_str).collect();
                 if coverage::is_covered(&inv.path, &present) {
-                    return (
-                        Route::Native {
-                            invocation: inv,
-                            args,
-                        },
-                        rewrites,
-                    );
+                    return (Route::Native { invocation: inv, args }, rewrites);
                 }
                 DelegateReason::NoCoverage
             }
@@ -102,16 +73,11 @@ pub fn route(args: Vec<OsString>, renv: &RouterEnv) -> (Route, normalize::Rewrit
         }
     };
     if renv.force_native {
-        let what = if verb.is_empty() {
-            "this invocation".to_string()
-        } else {
-            format!("`lope {verb}` with these arguments")
-        };
+        let what =
+            if verb.is_empty() { "this invocation".to_string() } else { format!("`lope {verb}` with these arguments") };
         let r = Route::Exit {
             code: exit::USAGE,
-            stderr: format!(
-                "lope: error: {what} is not implemented natively yet (LOPE_FORCE_NATIVE=1)"
-            ),
+            stderr: format!("lope: error: {what} is not implemented natively yet (LOPE_FORCE_NATIVE=1)"),
         };
         return (r, rewrites);
     }
@@ -132,20 +98,8 @@ mod tests {
         assert!(matches!(r(&["version"], &e), Route::Native { .. }));
         assert!(matches!(r(&["--version"], &e), Route::Native { .. }));
         assert!(matches!(r(&["-V"], &e), Route::Native { .. }));
-        assert!(matches!(
-            r(&["version", "--help"], &e),
-            Route::Delegate {
-                reason: DelegateReason::ParseError,
-                ..
-            }
-        ));
-        assert!(matches!(
-            r(&["version", "extra"], &e),
-            Route::Delegate {
-                reason: DelegateReason::ParseError,
-                ..
-            }
-        ));
+        assert!(matches!(r(&["version", "--help"], &e), Route::Delegate { reason: DelegateReason::ParseError, .. }));
+        assert!(matches!(r(&["version", "extra"], &e), Route::Delegate { reason: DelegateReason::ParseError, .. }));
     }
 
     #[test]
@@ -164,15 +118,8 @@ mod tests {
 
     #[test]
     fn nesting_guard_comes_first() {
-        let e = RouterEnv {
-            implementation_depth: Some("1".into()),
-            ..Default::default()
-        };
-        for args in [
-            &["version"][..],
-            &["review", "f", "--consensus", "any"],
-            &[],
-        ] {
+        let e = RouterEnv { implementation_depth: Some("1".into()), ..Default::default() };
+        for args in [&["version"][..], &["review", "f", "--consensus", "any"], &[]] {
             match r(args, &e) {
                 Route::Exit { code, stderr } => {
                     assert_eq!(code, 2);
@@ -181,56 +128,28 @@ mod tests {
                 other => panic!("{other:?}"),
             }
         }
-        let e = RouterEnv {
-            implementation_depth: Some("0".into()),
-            ..Default::default()
-        };
+        let e = RouterEnv { implementation_depth: Some("0".into()), ..Default::default() };
         assert!(matches!(r(&["version"], &e), Route::Native { .. }));
     }
 
     #[test]
     fn force_flags() {
-        let py = RouterEnv {
-            force_python: true,
-            ..Default::default()
-        };
-        assert!(matches!(
-            r(&["version"], &py),
-            Route::Delegate {
-                reason: DelegateReason::ForcedPython,
-                ..
-            }
-        ));
-        let native = RouterEnv {
-            force_native: true,
-            ..Default::default()
-        };
+        let py = RouterEnv { force_python: true, ..Default::default() };
+        assert!(matches!(r(&["version"], &py), Route::Delegate { reason: DelegateReason::ForcedPython, .. }));
+        let native = RouterEnv { force_native: true, ..Default::default() };
         assert!(matches!(r(&["version"], &native), Route::Native { .. }));
-        assert!(matches!(
-            r(&["status"], &native),
-            Route::Exit { code: 2, .. }
-        ));
+        assert!(matches!(r(&["status"], &native), Route::Exit { code: 2, .. }));
         // Python wins when both are set (rollback safety).
-        let both = RouterEnv {
-            force_python: true,
-            force_native: true,
-            ..Default::default()
-        };
+        let both = RouterEnv { force_python: true, force_native: true, ..Default::default() };
         assert!(matches!(r(&["status"], &both), Route::Delegate { .. }));
     }
 
     #[test]
     fn oq1_modes_exit_2() {
-        match r(
-            &["review", "f.md", "--consensus", "unanimous"],
-            &RouterEnv::default(),
-        ) {
+        match r(&["review", "f.md", "--consensus", "unanimous"], &RouterEnv::default()) {
             Route::Exit { code, stderr } => {
                 assert_eq!(code, 2);
-                assert!(
-                    stderr.starts_with("lope review: error: --consensus unanimous"),
-                    "{stderr}"
-                );
+                assert!(stderr.starts_with("lope review: error: --consensus unanimous"), "{stderr}");
             }
             other => panic!("{other:?}"),
         }

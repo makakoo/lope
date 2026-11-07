@@ -37,20 +37,13 @@ fn trace(route: &Route, rw: &Rewrites) {
     if rw.negotiate_rounds > 0 {
         notes.push(format!("negotiate-rounds×{}", rw.negotiate_rounds));
     }
-    let notes = if notes.is_empty() {
-        String::new()
-    } else {
-        format!(" [normalised: {}]", notes.join(", "))
-    };
+    let notes = if notes.is_empty() { String::new() } else { format!(" [normalised: {}]", notes.join(", ")) };
     match route {
         Route::Native { invocation, .. } => {
             eprintln!("lope-router: native {}{notes}", invocation.path.join(" "))
         }
         Route::Delegate { args, reason } => {
-            let argv: Vec<String> = args
-                .iter()
-                .map(|a| a.to_string_lossy().into_owned())
-                .collect();
+            let argv: Vec<String> = args.iter().map(|a| a.to_string_lossy().into_owned()).collect();
             eprintln!(
                 "lope-router: delegate ({reason:?}) {} -m lope {}{notes}",
                 delegate::interpreter().to_string_lossy(),

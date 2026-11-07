@@ -31,3 +31,11 @@ Port the state layer exactly, so that Rust and Python share `~/.lope` safely, an
 - A3 and A4 pass, and the NFR6 rollback check passes.
 - Verify, and record in evidence, whether Python tolerates extra manifest fields. This gates the FR12 placement.
 - Evidence: `docs/evidence/s1-core-state.txt` with the coverage-table hash.
+
+## Status (2026-11-07)
+
+**Closed.** Evidence: [`docs/evidence/s1-core-state.txt`](../evidence/s1-core-state.txt).
+- Native: `status`, `jobs`, `jobs list|reap|prune|kill` (all flags). 24/24 golden cases identical to Python, routing asserted.
+- A3 pass (byte-identical config save, incl. the live config's shape; rejections agree). A4 pass (cross-language list/reap/prune/close; 3 dead pruned, 1 live untouched; extra fields tolerated).
+- Building blocks: CPython-exact JSON writer and reader (`lope_core::pyjson`), redaction, config, journal, logo, run registry, run lock.
+- Not ported here (by design): the verdict parser moves to S3/S4 with its callers.
