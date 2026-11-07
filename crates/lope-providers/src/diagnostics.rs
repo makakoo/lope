@@ -38,7 +38,11 @@ pub fn subprocess_diagnostics(stdout: &str, stderr: &str, limit: usize) -> Strin
         let red = redact_diagnostic(v);
         let text = crate::pyre::strip(&red);
         if !text.is_empty() {
-            let shown = if crate::pyre::char_len(text) > limit { format!("...[truncated]...{}", tail(text, limit)) } else { text.to_string() };
+            let shown = if crate::pyre::char_len(text) > limit {
+                format!("...[truncated]...{}", tail(text, limit))
+            } else {
+                text.to_string()
+            };
             details.push(format!("{name}: {shown}"));
         }
     }

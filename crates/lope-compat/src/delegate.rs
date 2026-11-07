@@ -51,6 +51,45 @@ pub fn exec(args: &[OsString]) -> i32 {
     }
 }
 
+/// Delegate after stdin was consumed: feed the bytes back through a pipe
+/// that becomes Python's stdin, then exec.
+pub fn exec_with_stdin(args: &[OsString], bytes: &[u8]) -> i32 {
+    let mut fds = [0i32; 2];
+    if unsafe { libc::pipe(fds.as_mut_ptr()) } != 0 {
+        eprintln!("lope: cannot create pipe for delegation");
+        return exit::CANNOT_EXECUTE;
+    }
+    let (r, w) = (fds[0], fds[1]);
+    let data = bytes.to_vec();
+    // A writer process feeds the pipe so large inputs cannot deadlock exec.
+    match unsafe { libc::fork() } {
+        0 => {
+            unsafe { libc::close(r) };
+            let mut off = 0;
+            while off < data.len() {
+                let n = unsafe { libc::write(w, data[off..].as_ptr() as *const libc::c_void, data.len() - off) };
+                if n <= 0 {
+                    break;
+                }
+                off += n as usize;
+            }
+            unsafe { libc::_exit(0) };
+        }
+        pid if pid > 0 => {
+            unsafe {
+                libc::close(w);
+                libc::dup2(r, 0);
+                libc::close(r);
+            }
+            exec(args)
+        }
+        _ => {
+            eprintln!("lope: cannot fork for delegation");
+            exit::CANNOT_EXECUTE
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

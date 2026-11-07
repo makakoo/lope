@@ -1,0 +1,138 @@
+{
+ "comment": "S4 ask corpus: native ask vs Python; mock-fail exits 3.",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "ask-basic",
+   "argv": [
+    "ask",
+    "What is 2+2?"
+   ]
+  },
+  {
+   "name": "ask-json",
+   "argv": [
+    "ask",
+    "What is 2+2?",
+    "--json"
+   ]
+  },
+  {
+   "name": "ask-context",
+   "argv": [
+    "ask",
+    "Q?",
+    "--context",
+    "Some context\nline2"
+   ]
+  },
+  {
+   "name": "ask-sequential",
+   "argv": [
+    "ask",
+    "Q?",
+    "--sequential"
+   ]
+  },
+  {
+   "name": "ask-one-validator",
+   "argv": [
+    "ask",
+    "Q?",
+    "--validators",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "ask-long-preview",
+   "argv": [
+    "ask",
+    "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+   ]
+  },
+  {
+   "name": "ask-failing-validator",
+   "argv": [
+    "ask",
+    "Q?"
+   ],
+   "validators": [
+    "mock-a",
+    "mock-fail"
+   ]
+  },
+  {
+   "name": "ask-unknown-validator",
+   "argv": [
+    "ask",
+    "Q?",
+    "--validators",
+    "mock-a,nope"
+   ]
+  },
+  {
+   "name": "ask-synth-delegates",
+   "argv": [
+    "ask",
+    "Q?",
+    "--synth"
+   ],
+   "route": "delegate"
+  },
+  {
+   "name": "pipe-basic",
+   "argv": [
+    "pipe"
+   ],
+   "stdin": "Summarise: the sky is blue.\n"
+  },
+  {
+   "name": "pipe-json",
+   "argv": [
+    "pipe",
+    "--json"
+   ],
+   "stdin": "Q\n"
+  },
+  {
+   "name": "pipe-empty",
+   "argv": [
+    "pipe"
+   ],
+   "stdin": "   \n"
+  },
+  {
+   "name": "pipe-require-all",
+   "argv": [
+    "pipe",
+    "--require-all"
+   ],
+   "stdin": "Q\n",
+   "validators": [
+    "mock-a",
+    "mock-b",
+    "mock-fail"
+   ]
+  },
+  {
+   "name": "pipe-synth-replays-stdin",
+   "argv": [
+    "pipe",
+    "--synth"
+   ],
+   "stdin": "Q\n",
+   "route": "delegate"
+  },
+  {
+   "name": "pipe-http-provider-replays-stdin",
+   "argv": [
+    "pipe",
+    "--validators",
+    "web"
+   ],
+   "stdin": "Q\n",
+   "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['providers'].append({'name':'web','type':'http','url':'http://127.0.0.1:9/v1'});json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n",
+   "route": "handback"
+  }
+ ]
+}

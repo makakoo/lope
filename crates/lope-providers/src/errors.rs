@@ -12,7 +12,14 @@ pub enum ProviderError {
     /// RuntimeError / generic
     Runtime(String),
     /// ProcessCompletionError (UNVERIFIED), with recovery fields
-    Unverified { message: String, stdout: String, cleanup: String, stdout_complete: bool, stdout_truncated: bool, returncode: serde_json::Value },
+    Unverified {
+        message: String,
+        stdout: String,
+        cleanup: String,
+        stdout_complete: bool,
+        stdout_truncated: bool,
+        returncode: serde_json::Value,
+    },
     /// validator cannot draft (`NotImplementedError`)
     NotImplemented(String),
     /// BudgetExhausted(reason, message)
@@ -22,7 +29,10 @@ pub enum ProviderError {
 impl std::fmt::Display for ProviderError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProviderError::Infra(m) | ProviderError::ToolPermission(m) | ProviderError::Runtime(m) | ProviderError::NotImplemented(m) => f.write_str(m),
+            ProviderError::Infra(m)
+            | ProviderError::ToolPermission(m)
+            | ProviderError::Runtime(m)
+            | ProviderError::NotImplemented(m) => f.write_str(m),
             ProviderError::Unverified { message, .. } => f.write_str(message),
             ProviderError::Budget { message, .. } => f.write_str(message),
         }

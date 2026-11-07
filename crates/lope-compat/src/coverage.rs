@@ -22,6 +22,46 @@ pub static COVERAGE: &[Coverage] = &[
     Coverage { path: &["jobs", "reap"], args: &["--dry-run", "--stale", "--json"], since: "S1" },
     Coverage { path: &["jobs", "prune"], args: &["--stale", "--dry-run", "--json"], since: "S1" },
     Coverage { path: &["jobs", "kill"], args: &["run_id", "--json"], since: "S1" },
+    // S4 (first fan-out verb). --synth/--anonymous/--brain-* stay delegated.
+    Coverage {
+        path: &["ask"],
+        args: &[
+            "question",
+            "--json",
+            "--context",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["pipe"],
+        args: &[
+            "--require-all",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S4",
+    },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {

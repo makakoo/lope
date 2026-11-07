@@ -1,0 +1,43 @@
+# S3/S4 progress evidence — providers + first native fan-out verbs
+generated 2026-11-07T18:09:05Z
+
+## Native coverage
+fingerprint fnv64:996e8dcdda8054a5
+S0       lope version                  args: []
+S1       lope status                   args: []
+S1       lope jobs                     args: []
+S1       lope jobs list                args: [--json]
+S1       lope jobs reap                args: [--dry-run, --stale, --json]
+S1       lope jobs prune               args: [--stale, --dry-run, --json]
+S1       lope jobs kill                args: [run_id, --json]
+S4       lope ask                      args: [question, --json, --context, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
+S4       lope pipe                     args: [--require-all, --json, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
+
+## Golden runs: native ask/pipe vs Python (tools/parity/corpus/s4-ask.json)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS ask-basic                          native   exit=0   files=4   rust=4.89s python=11.49s attempt=1
+PASS ask-json                           native   exit=0   files=4   rust=2.76s python=15.40s attempt=1
+PASS ask-context                        native   exit=0   files=4   rust=2.98s python=12.91s attempt=1
+PASS ask-sequential                     native   exit=0   files=4   rust=2.56s python=13.39s attempt=1
+PASS ask-one-validator                  native   exit=0   files=4   rust=2.25s python=9.08s attempt=1
+PASS ask-long-preview                   native   exit=0   files=4   rust=3.32s python=13.17s attempt=1
+PASS ask-failing-validator              native   exit=1   files=4   rust=3.97s python=13.22s attempt=1
+PASS ask-unknown-validator              native   exit=0   files=4   rust=2.73s python=10.74s attempt=1
+PASS ask-synth-delegates                delegate exit=0   files=4   rust=17.80s python=17.08s attempt=1
+PASS pipe-basic                         native   exit=0   files=4   rust=2.47s python=11.15s attempt=1
+PASS pipe-json                          native   exit=0   files=4   rust=2.16s python=12.55s attempt=1
+PASS pipe-empty                         native   exit=2   files=1   rust=0.03s python=4.34s attempt=1
+PASS pipe-require-all                   native   exit=1   files=4   rust=3.12s python=15.50s attempt=1
+PASS pipe-synth-replays-stdin           delegate exit=0   files=4   rust=13.03s python=12.41s attempt=1
+PASS pipe-http-provider-replays-stdin   handback exit=1   files=3   rust=11.54s python=10.15s attempt=1
+golden-run: 15/15 cases identical
+
+## Differential fuzzing (0 mismatches)
+verdict parser + diagnostics redaction + output validity: 16000 cases (tools/parity/verdict_fuzz.py)
+
+## Hand-back design
+A native verb returns Native::Delegate before any output or state write when it meets
+something not ported (http/makakoo providers, opencode/aider built-ins, prompt_wrapper
+fields, chunked/rejected request plans, --synth/--anonymous/--brain-*, first-run setup).
+pipe replays the stdin it already consumed to Python through a pipe (case
+pipe-http-provider-replays-stdin, route=handback, identical output).

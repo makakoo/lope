@@ -25,7 +25,8 @@ pub fn splitlines(s: &str) -> Vec<&str> {
     let mut i = 0;
     while i < b.len() {
         let (pos, c) = b[i];
-        let is_break = matches!(c, '\n' | '\r' | '\x0b' | '\x0c' | '\x1c' | '\x1d' | '\x1e' | '\u{85}' | '\u{2028}' | '\u{2029}');
+        let is_break =
+            matches!(c, '\n' | '\r' | '\x0b' | '\x0c' | '\x1c' | '\x1d' | '\x1e' | '\u{85}' | '\u{2028}' | '\u{2029}');
         if is_break {
             out.push(&s[start..pos]);
             let mut next = pos + c.len_utf8();

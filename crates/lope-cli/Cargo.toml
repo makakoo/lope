@@ -15,7 +15,9 @@ lope-core.workspace = true
 lope-compat.workspace = true
 lope-state.workspace = true
 lope-runtime.workspace = true
+lope-providers.workspace = true
 serde_json.workspace = true
+libc.workspace = true
 clap.workspace = true
 
 [dev-dependencies]

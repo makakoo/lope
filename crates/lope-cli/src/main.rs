@@ -23,7 +23,21 @@ fn main() {
         trace(&route, &rewrites);
     }
     let code = match route {
-        Route::Native { invocation, .. } => native::run(&invocation),
+        Route::Native { invocation, args } => match native::run(&invocation) {
+            native::Native::Exit(code) => code,
+            native::Native::Delegate(reason) => {
+                if lope_core::env::flag("LOPE_ROUTER_TRACE") {
+                    eprintln!("lope-router: native handed back to python: {reason}");
+                }
+                delegate::exec(&args)
+            }
+            native::Native::DelegateWithStdin(reason, bytes) => {
+                if lope_core::env::flag("LOPE_ROUTER_TRACE") {
+                    eprintln!("lope-router: native handed back to python: {reason}");
+                }
+                delegate::exec_with_stdin(&args, &bytes)
+            }
+        },
         Route::Delegate { args, .. } => delegate::exec(&args),
         Route::Exit { code, stderr } => {
             eprintln!("{stderr}");

@@ -40,6 +40,7 @@ MOCK_VALIDATOR = r'''#!/bin/sh
 # identical prompts on both sides give identical reports.
 name=${1:-mock}
 sum=$(cksum | cut -d' ' -f1)
+case "$name" in mock-fail) echo "boom: provider failed" >&2; exit 3 ;; esac
 case "$LOPE_MOCK_MODE" in
   verdict)
     printf 'Reviewed by %s (prompt %s).\n\n1. [major] Missing error handling in section 2.\n2. [minor] Typo in the introduction.\n\n---VERDICT---\n{"status": "PASS", "confidence": 0.9, "rationale": "mock %s approves"}\n---END---\n' "$name" "$sum" "$name" ;;
@@ -207,10 +208,13 @@ def run_side(side, base, case, lope_bin):
     route = None
     if side == "rust":
         # The router's trace line is the first stderr line; record and strip it.
-        first, _, rest = stderr.partition("\n")
-        if first.startswith("lope-router: "):
-            route = first.split()[1]
-            stderr = rest
+        lines = stderr.split("\n")
+        trace = [l for l in lines if l.startswith("lope-router: ")]
+        if trace:
+            route = trace[0].split()[1]
+            if any("handed back to python" in l for l in trace):
+                route = "handback"
+            stderr = "\n".join(l for l in lines if not l.startswith("lope-router: "))
     return {
         "exit": p.returncode,
         "route": route,

@@ -34,8 +34,12 @@ fn p() -> &'static P {
         status: re(r"(?im)^\s*status:\s*(\w+)"),
         confidence: re(r"(?im)^\s*confidence:\s*([0-9.]+)"),
         rationale: re(r"(?ims)^\s*rationale:\s*(.+?)(?=^\s*(?:required_fixes|nice_to_have|status|confidence):|\z)"),
-        fixes: re(r"(?im)^\s*required_fixes:\s*$\n(?P<body>(?:.*(?:\n|\z))*?)(?=^\s*(?:nice_to_have|status|confidence):|\z)"),
-        nice: re(r"(?im)^\s*nice_to_have:\s*$\n(?P<body>(?:.*(?:\n|\z))*?)(?=^\s*(?:required_fixes|status|confidence):|\z)"),
+        fixes: re(
+            r"(?im)^\s*required_fixes:\s*$\n(?P<body>(?:.*(?:\n|\z))*?)(?=^\s*(?:nice_to_have|status|confidence):|\z)",
+        ),
+        nice: re(
+            r"(?im)^\s*nice_to_have:\s*$\n(?P<body>(?:.*(?:\n|\z))*?)(?=^\s*(?:required_fixes|status|confidence):|\z)",
+        ),
         file_line: re(r"(?:[A-Za-z0-9_./-]+/)?[A-Za-z0-9_.-]+\.[A-Za-z0-9]+:\d+"),
         shell_cmd: re(r"(?:^|\n)[ \t]*[\$>#][ \t]+\S"),
         code_fence: re(r"```[\s\S]*?```"),
@@ -141,7 +145,12 @@ pub fn evidence_present(text: &str) -> bool {
         || p.evidence.iter().any(|r| is_match(r, text))
 }
 
-fn apply_evidence_gate(status: VerdictStatus, rationale: &str, raw: &str, fixes: Vec<String>) -> (VerdictStatus, Vec<String>, bool) {
+fn apply_evidence_gate(
+    status: VerdictStatus,
+    rationale: &str,
+    raw: &str,
+    fixes: Vec<String>,
+) -> (VerdictStatus, Vec<String>, bool) {
     if std::env::var("LOPE_EVIDENCE_GATE").map(|v| v.to_lowercase() == "off").unwrap_or(false) {
         return (status, fixes, false);
     }
@@ -211,19 +220,28 @@ pub fn parse_verdict(text: &str, validator_name: &str, duration: f64) -> PhaseVe
         };
     }
     let status_raw = search(&p().status, &block).map(|c| c.get(1).unwrap().as_str().to_uppercase()).unwrap_or_default();
-    let Some(mut status) = VerdictStatus::parse(&status_raw).filter(|s| matches!(s, VerdictStatus::Pass | VerdictStatus::NeedsFix | VerdictStatus::Fail)) else {
+    let Some(mut status) = VerdictStatus::parse(&status_raw)
+        .filter(|s| matches!(s, VerdictStatus::Pass | VerdictStatus::NeedsFix | VerdictStatus::Fail))
+    else {
         return infra(format!("unknown status token: {}", lope_state::registry::py_repr_str(&status_raw)));
     };
-    let confidence = search(&p().confidence, &block)
-        .and_then(|c| py_float_str(c.get(1).unwrap().as_str()))
-        .unwrap_or(0.0);
+    let confidence =
+        search(&p().confidence, &block).and_then(|c| py_float_str(c.get(1).unwrap().as_str())).unwrap_or(0.0);
     let rationale = search(&p().rationale, &block)
         .map(|c| {
-            splitlines(c.get(1).unwrap().as_str()).iter().map(|l| l.trim_end()).collect::<Vec<_>>().join("\n").trim().to_string()
+            splitlines(c.get(1).unwrap().as_str())
+                .iter()
+                .map(|l| l.trim_end())
+                .collect::<Vec<_>>()
+                .join("\n")
+                .trim()
+                .to_string()
         })
         .unwrap_or_default();
-    let mut fixes = search(&p().fixes, &block).map(|c| parse_bullet_list(c.name("body").unwrap().as_str())).unwrap_or_default();
-    let nice = search(&p().nice, &block).map(|c| parse_bullet_list(c.name("body").unwrap().as_str())).unwrap_or_default();
+    let mut fixes =
+        search(&p().fixes, &block).map(|c| parse_bullet_list(c.name("body").unwrap().as_str())).unwrap_or_default();
+    let nice =
+        search(&p().nice, &block).map(|c| parse_bullet_list(c.name("body").unwrap().as_str())).unwrap_or_default();
     gate_conf(&mut status, &mut fixes, confidence);
     let (status, fixes, ev) = apply_evidence_gate(status, &rationale, text, fixes);
     PhaseVerdict {

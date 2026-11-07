@@ -34,7 +34,10 @@ pub struct ErrView<'a> {
 impl<'a> From<&'a ProviderError> for ErrView<'a> {
     fn from(e: &'a ProviderError) -> Self {
         let text: &str = match e {
-            ProviderError::Infra(m) | ProviderError::ToolPermission(m) | ProviderError::Runtime(m) | ProviderError::NotImplemented(m) => m,
+            ProviderError::Infra(m)
+            | ProviderError::ToolPermission(m)
+            | ProviderError::Runtime(m)
+            | ProviderError::NotImplemented(m) => m,
             ProviderError::Unverified { message, .. } => message,
             ProviderError::Budget { message, .. } => message,
         };
@@ -76,7 +79,9 @@ pub fn classify(e: ErrView) -> Classification {
     {
         return c("tool_permission_denied", false, None);
     }
-    let retry_after = search(retry_after_re, text).and_then(|m| m.name("seconds").unwrap().as_str().parse::<f64>().ok()).map(|v| v.max(0.0));
+    let retry_after = search(retry_after_re, text)
+        .and_then(|m| m.name("seconds").unwrap().as_str().parse::<f64>().ok())
+        .map(|v| v.max(0.0));
     if lowered.contains("429") || lowered.contains("rate limit") || lowered.contains("too many requests") {
         return c("rate_limited", true, retry_after);
     }
@@ -92,13 +97,22 @@ pub fn classify(e: ErrView) -> Classification {
     if lowered.contains("timed out") || lowered.contains("timeout after") || lowered.contains("provider_timeout") {
         return c("provider_timeout", false, None);
     }
-    if lowered.contains("output_limit") || lowered.contains("output limit") || (lowered.contains("exceeded") && lowered.contains("stdout")) {
+    if lowered.contains("output_limit")
+        || lowered.contains("output limit")
+        || (lowered.contains("exceeded") && lowered.contains("stdout"))
+    {
         return c("output_limit", false, None);
     }
-    if lowered.contains("input_limit") || lowered.contains("argv payload") || (lowered.contains("prompt") && lowered.contains("too large")) {
+    if lowered.contains("input_limit")
+        || lowered.contains("argv payload")
+        || (lowered.contains("prompt") && lowered.contains("too large"))
+    {
         return c("input_limit", false, None);
     }
-    if ["unauthorized", "forbidden", "invalid api key", "authentication", "http 401", "http 403"].iter().any(|t| lowered.contains(t)) {
+    if ["unauthorized", "forbidden", "invalid api key", "authentication", "http 401", "http 403"]
+        .iter()
+        .any(|t| lowered.contains(t))
+    {
         return c("auth_error", false, None);
     }
     if ["parse error", "invalid json", "no ---verdict---", "unparseable"].iter().any(|t| lowered.contains(t)) {
@@ -111,7 +125,10 @@ pub fn classify(e: ErrView) -> Classification {
 }
 
 fn jitter(seed: &str) -> f64 {
-    if matches!(std::env::var("LOPE_RETRY_JITTER").unwrap_or_default().trim().to_lowercase().as_str(), "0" | "off" | "false" | "no") {
+    if matches!(
+        std::env::var("LOPE_RETRY_JITTER").unwrap_or_default().trim().to_lowercase().as_str(),
+        "0" | "off" | "false" | "no"
+    ) {
         return 0.0;
     }
     let d = Sha256::digest(seed.as_bytes());
@@ -119,7 +136,14 @@ fn jitter(seed: &str) -> f64 {
     frac * MAX_JITTER_SECONDS
 }
 
-pub fn decide(e: ErrView, attempt: u32, remaining: f64, requested_timeout: f64, seed: &str, max_retries: u32) -> Decision {
+pub fn decide(
+    e: ErrView,
+    attempt: u32,
+    remaining: f64,
+    requested_timeout: f64,
+    seed: &str,
+    max_retries: u32,
+) -> Decision {
     let c = classify(e);
     if !c.retryable {
         return Decision { retry: false, reason: "not_retryable", delay: 0.0, classification: c.kind };
@@ -129,7 +153,11 @@ pub fn decide(e: ErrView, attempt: u32, remaining: f64, requested_timeout: f64, 
     }
     let delay = c.retry_after.unwrap_or_else(|| DEFAULT_TRANSIENT_DELAY_SECONDS + jitter(seed));
     if remaining < delay + requested_timeout.max(0.0) {
-        let reason = if c.retry_after.is_some() { "retry_after_exceeds_budget" } else { "insufficient_budget_for_complete_retry" };
+        let reason = if c.retry_after.is_some() {
+            "retry_after_exceeds_budget"
+        } else {
+            "insufficient_budget_for_complete_retry"
+        };
         return Decision { retry: false, reason, delay, classification: c.kind };
     }
     Decision { retry: true, reason: "transient_retry", delay, classification: c.kind }
