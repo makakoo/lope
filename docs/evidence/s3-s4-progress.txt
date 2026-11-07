@@ -70,3 +70,25 @@ PASS compare-criteria-json              native   exit=0   files=6   rust=2.08s p
 PASS compare-missing-b                  native   exit=1   files=3   rust=0.03s python=6.31s attempt=1
 PASS compare-failing                    native   exit=1   files=6   rust=3.62s python=21.70s attempt=1
 golden-run: 27/27 cases identical
+
+## Golden runs (team)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS team-default                       native   exit=0   files=1   rust=2.12s python=3.61s attempt=1
+PASS team-list                          native   exit=0   files=1   rust=0.03s python=2.64s attempt=1
+PASS team-list-no-config                native   exit=0   files=0   rust=0.03s python=2.48s attempt=1
+PASS team-enable-builtin                native   exit=0   files=2   rust=0.06s python=3.08s attempt=1
+PASS team-enable-primary                native   exit=0   files=2   rust=0.05s python=2.23s attempt=1
+PASS team-enable-already                native   exit=0   files=2   rust=0.05s python=2.11s attempt=1
+PASS team-enable-unknown                native   exit=2   files=1   rust=0.03s python=1.97s attempt=1
+PASS team-enable-bad-primary            native   exit=2   files=1   rust=0.03s python=2.12s attempt=1
+PASS team-enable-no-config              native   exit=0   files=2   rust=0.05s python=4.77s attempt=1
+PASS team-enable-custom                 native   exit=0   files=2   rust=0.07s python=2.51s attempt=1
+PASS team-disable                       native   exit=0   files=2   rust=0.05s python=3.71s attempt=1
+PASS team-disable-all                   native   exit=0   files=2   rust=0.06s python=2.91s attempt=1
+PASS team-disable-missing               native   exit=1   files=1   rust=0.03s python=4.14s attempt=1
+PASS team-remove-validator              native   exit=0   files=2   rust=0.06s python=3.38s attempt=1
+PASS team-remove-primary                native   exit=0   files=2   rust=0.05s python=3.59s attempt=1
+PASS team-remove-provider-only          native   exit=0   files=2   rust=0.06s python=3.42s attempt=1
+PASS team-remove-missing                native   exit=1   files=1   rust=0.03s python=4.43s attempt=1
+PASS team-add-delegates                 delegate exit=0   files=2   rust=4.92s python=2.89s attempt=1
+golden-run: 18/18 cases identical

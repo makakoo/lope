@@ -8,6 +8,7 @@ mod fanout;
 mod jobs;
 mod scope;
 mod status;
+mod team;
 mod vote;
 
 /// Result of a native command: an exit code, or "hand this invocation to
@@ -74,6 +75,8 @@ pub fn run(inv: &Invocation) -> Native {
         ["pipe"] => ask::run_pipe(&inv.matches),
         ["vote"] => vote::run(&inv.matches),
         ["compare"] => compare::run(&inv.matches),
+        ["team"] => team::run(None, &inv.matches),
+        ["team", sub] => team::run(Some(sub), &inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }

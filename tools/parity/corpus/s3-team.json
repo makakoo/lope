@@ -1,0 +1,160 @@
+{
+ "comment": "S3 team corpus: native team list/enable/disable/remove vs Python; config.json written by both is compared byte-for-byte via the snapshot.",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "team-default",
+   "argv": [
+    "team"
+   ]
+  },
+  {
+   "name": "team-list",
+   "argv": [
+    "team",
+    "list"
+   ],
+   "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['providers'].append({'name':'web','type':'http','url':'http://x.invalid'});c['providers'].append({'name':'off-cli','type':'subprocess','command':['x']});json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n"
+  },
+  {
+   "name": "team-list-no-config",
+   "argv": [
+    "team",
+    "list"
+   ],
+   "setup_py": "os.unlink(os.environ['LOPE_HOME']+'/config.json')\n"
+  },
+  {
+   "name": "team-enable-builtin",
+   "argv": [
+    "team",
+    "enable",
+    "claude",
+    "codex"
+   ]
+  },
+  {
+   "name": "team-enable-primary",
+   "argv": [
+    "team",
+    "enable",
+    "qwen",
+    "--primary",
+    "qwen"
+   ]
+  },
+  {
+   "name": "team-enable-already",
+   "argv": [
+    "team",
+    "enable",
+    "mock-a"
+   ]
+  },
+  {
+   "name": "team-enable-unknown",
+   "argv": [
+    "team",
+    "enable",
+    "nope"
+   ]
+  },
+  {
+   "name": "team-enable-bad-primary",
+   "argv": [
+    "team",
+    "enable",
+    "claude",
+    "--primary",
+    "zzz"
+   ]
+  },
+  {
+   "name": "team-enable-no-config",
+   "argv": [
+    "team",
+    "enable",
+    "codex"
+   ],
+   "setup_py": "os.unlink(os.environ['LOPE_HOME']+'/config.json')\n"
+  },
+  {
+   "name": "team-enable-custom",
+   "argv": [
+    "team",
+    "enable",
+    "off-cli"
+   ],
+   "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['providers'].append({'name':'web','type':'http','url':'http://x.invalid'});c['providers'].append({'name':'off-cli','type':'subprocess','command':['x']});json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n"
+  },
+  {
+   "name": "team-disable",
+   "argv": [
+    "team",
+    "disable",
+    "mock-a"
+   ]
+  },
+  {
+   "name": "team-disable-all",
+   "argv": [
+    "team",
+    "disable",
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "team-disable-missing",
+   "argv": [
+    "team",
+    "disable",
+    "claude"
+   ]
+  },
+  {
+   "name": "team-remove-validator",
+   "argv": [
+    "team",
+    "remove",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "team-remove-primary",
+   "argv": [
+    "team",
+    "remove",
+    "mock-a"
+   ]
+  },
+  {
+   "name": "team-remove-provider-only",
+   "argv": [
+    "team",
+    "remove",
+    "web"
+   ],
+   "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['providers'].append({'name':'web','type':'http','url':'http://x.invalid'});c['providers'].append({'name':'off-cli','type':'subprocess','command':['x']});json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n"
+  },
+  {
+   "name": "team-remove-missing",
+   "argv": [
+    "team",
+    "remove",
+    "ghost"
+   ]
+  },
+  {
+   "name": "team-add-delegates",
+   "argv": [
+    "team",
+    "add",
+    "new-one",
+    "--cmd",
+    "echo {prompt}"
+   ],
+   "route": "delegate"
+  }
+ ]
+}

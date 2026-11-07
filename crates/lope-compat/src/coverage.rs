@@ -103,6 +103,11 @@ pub static COVERAGE: &[Coverage] = &[
         ],
         since: "S4",
     },
+    Coverage { path: &["team"], args: &[], since: "S3" },
+    Coverage { path: &["team", "list"], args: &[], since: "S3" },
+    Coverage { path: &["team", "enable"], args: &["names", "--primary"], since: "S3" },
+    Coverage { path: &["team", "disable"], args: &["names"], since: "S3" },
+    Coverage { path: &["team", "remove"], args: &["name"], since: "S3" },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {
