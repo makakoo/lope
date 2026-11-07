@@ -115,13 +115,13 @@ There is no tier that runs `--print`/`exec` CLIs under a PTY (DEC-2).
 
 ## 5. Strangler routing (DEC-1)
 
-1. Normalise argv: `review … --consensus quorum` → `--consensus`; `negotiate … --rounds N` → `--max-rounds N`; top-level `--version`/`-V` → `version` (FR2, FR23).
-2. Apply the nesting guard: `LOPE_IMPLEMENTATION_DEPTH > 0` → print Python's exact message and exit 2 (FR4).
-3. Look up `(verb, subcommand, flag set)` in the **native coverage table**, which is compiled in and grows sprint by sprint. If covered, run natively.
-4. Otherwise `exec` Python Lope: `python3 -m lope <normalised argv>` with `PYTHONPATH=$LOPE_HOME` (default `~/.lope`). The interpreter is resolved as `LOPE_PYTHON`, then `/usr/bin/python3`, then `python3` on `PATH`. `exec` replaces the process, so env, cwd, stdio, signals and exit status are preserved by construction.
-5. `LOPE_FORCE_PYTHON=1` forces step 4 for every verb; `LOPE_FORCE_NATIVE=1` makes unported invocations fail with exit 2. Both exist for the parity harness and for rollback.
+1. Apply the nesting guard first, exactly where Python does (`cli.py:182-192`, before any parsing): `LOPE_IMPLEMENTATION_DEPTH > 0`, or not an integer → print Python's exact message and exit 2 (FR4).
+2. Normalise argv: `review … --consensus quorum` → `--consensus`; `negotiate … --rounds N` → `--max-rounds N`; top-level `--version`/`-V` → `version` (FR2, FR23). Tokens are classified the way argparse does, so option values, `--`, abbreviations and negative numbers are never rewritten.
+3. Look up `(verb, subcommand, flag set)` in the **native coverage table**, which is compiled in and grows sprint by sprint. The flag set comes from parsing with the clap grammar generated from the argparse capture. If covered, run natively. A clap parse error (including `--help`) counts as not covered, so Python prints its own usage errors and help.
+4. Otherwise `exec` Python Lope: `python3 -m lope <normalised argv>` with `PYTHONPATH=$LOPE_HOME` (default `~/.lope`). The interpreter is resolved as `LOPE_PYTHON`, then `/usr/bin/python3`, then `python3` on `PATH`. `exec` replaces the process, so env, cwd, stdio, signals and exit status are preserved by construction. SIGPIPE is reset to the default before `exec`, because Rust ignores it at startup and ignored signals survive `exec`.
+5. `LOPE_FORCE_PYTHON=1` forces step 4 for every verb; `LOPE_FORCE_NATIVE=1` makes unported invocations fail with exit 2. If both are set, Python wins (rollback safety). Both exist for the parity harness and for rollback. `LOPE_ROUTER_TRACE=1` prints the routing decision on stderr.
 
-The coverage table is the single place that says what is native. `lope status` prints its hash, and `docs/evidence/` records it at each sprint end.
+The coverage table (`crates/lope-compat/src/coverage.rs`) is the single place that says what is native. `lope-parity-dump --coverage` prints it with its fingerprint, `lope status` will print the fingerprint once it is native (S1), and `docs/evidence/` records it at each sprint end.
 
 ## 6. Herdr reuse: what is taken and what is not
 

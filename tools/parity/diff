@@ -1,0 +1,5 @@
+#!/bin/sh
+# A1 step 3: compare the two dumps; exit 1 on differences not in allowlist.json.
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+exec /usr/bin/python3 -I "$here/diff.py" "$here/out/python.json" "$here/out/rust.json" "$here/allowlist.json"

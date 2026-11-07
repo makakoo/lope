@@ -34,7 +34,7 @@ Plan revision 2 (2026-11-07). Deliver a Rust `lope` that is a behavioural drop-i
 - `docs/evidence/s0-router.txt`
 **Tests:**
 - `A1: tools/parity/dump-python && tools/parity/dump-rust && tools/parity/diff`
-- `A2: cargo test -p lope-compat --test delegation_fidelity`
+- `A2: cargo test -p lope-cli --test delegation_fidelity`
 
 ### Phase 2: s1-core-config-and-state
 **Goal:** Port config (Python save semantics), redaction, the verdict parser, the runs registry and the run lock, and make `status` and `jobs` native with byte-compatible output.

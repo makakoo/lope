@@ -1,0 +1,11 @@
+[package]
+name = "lope-makakoo"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+lope-core.workspace = true
+lope-runtime.workspace = true

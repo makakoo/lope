@@ -4,7 +4,9 @@
 
 ## 1. CLI contract
 
-**Parity baseline:** [`docs/reference/python-lope-0.17.3-cli-help.txt`](../reference/python-lope-0.17.3-cli-help.txt), regenerated in S0 at the PL-1 tag. S0 adds a machine-readable dump of the argparse tree (`tools/parity`), which supersedes the text capture as the test oracle.
+**Parity baseline:** the machine-readable argparse capture [`crates/lope-compat/grammar/argparse-python-lope.json`](../../crates/lope-compat/grammar/argparse-python-lope.json) (written by `tools/parity/dump-python`) is the test oracle. The clap grammar is generated from it at build time, and A1 diffs the two (`tools/parity/{dump-python,dump-rust,diff}`). The text capture [`docs/reference/python-lope-0.17.3-cli-help.txt`](../reference/python-lope-0.17.3-cli-help.txt) is kept for people. Both are regenerated at the PL-1 tag.
+
+Note: `--consensus` and `--structured` are two separate `store_true` actions that share the dest `consensus`, not argparse aliases. They behave the same.
 
 | Verb | Shape (abridged; pool = shared pool flags) |
 |---|---|
@@ -134,7 +136,7 @@ rules_file = "~/.lope/super-lope/blocker-rules.toml"
 
 - **`~/.lope/runs/`**: `active/`, `completed/`, `work/`, `registry.lock`. Manifest schema is Python's (`jobs.py`), with forbidden keys per NFR5. Rust adds only the FR11 cleanup metadata and FR12 diagnostics fields. **Unverified:** whether Python's registry tolerates extra manifest fields. A4 must prove it before Rust writes any extra field. If it does not, the extra data goes in the `.diag` sidecar instead.
 - **`run.lock`**: Python semantics (`runlock.py`).
-- **`memory.db`**: [`python-lope-memory-db-schema.sql`](../reference/python-lope-memory-db-schema.sql), `user_version = 1`.
+- **`memory.db`**: [`python-lope-memory-db-schema.sql`](../reference/python-lope-memory-db-schema.sql), `user_version = 1`. Located at `$LOPE_MEMORY_DB`, else **`$HOME/.lope/memory.db`, independent of `$LOPE_HOME`** (`memory.py:44-46, 75-82`).
 - **`journal/YYYY_MM_DD.md`** (audit), `journal.jsonl` (heal), `latency.json`, `trusted_gates.json`: Python formats.
 - **Per-project:** `./.lope/config.json`, `./.lope/rules.json`. `.lope/reports/` belongs to Glimmer.
 
@@ -160,6 +162,7 @@ These ship through their own repositories. Super Lope sprints track them but nev
 | **PL-2** | `~/.lope` | Add `super-lope/` to `.gitignore` | before any write to `~/.lope/super-lope/` |
 | **PL-3** | `~/.lope` | Replace `PYTHONPATH=~/.lope python3 -m lope` with `lope` in 7 SKILL.md files (`lope, lope-audit, lope-execute, lope-help, lope-negotiate, lope-team, using-lope`) and 7 `commands/` files; re-sync the 6 stale Codex copies | S8 |
 | **PL-4** (optional) | `~/.lope` | Land the WIP completion fix in Python as well | anytime |
+| **PL-5** | `~/.lope` | Fix `jobs.py:507-522` `is_owned_path`: the ancestor walk compares the *unresolved* path against the *resolved* root, so it never stops at the root and meets any symlinked ancestor (e.g. macOS `/var` → `/private/var`). Every owned path is then rejected, and each run with validator calls exits 1 with "owned scratch cleanup failure". Fix: walk the resolved path, or resolve the root's ancestors consistently. Found in S0 (`tools/parity` case `symlinked-lope-home-closeout-bug`). Rust must decide in S1/S2 whether to reproduce or fix it (DEC needed). | anytime; affects anyone whose `LOPE_HOME` has a symlinked ancestor |
 | **PG-1** | Glimmer | `glimmer install` must not overwrite a non-shim `/usr/local/bin/lope` (`bin/glimmer:248-255`) | S8 |
 | **PG-2** | Glimmer | Count manifests in `~/.lope/runs/active` instead of `state/sprints` (`bin/glimmer:193-200`, `server.js:274-281`, `edges.ts:294-310`) | S8 |
 | **PG-3** | Glimmer | Show `validators` as a list (`server.js:263-269, 618-624`) | S8 |

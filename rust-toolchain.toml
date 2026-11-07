@@ -1,0 +1,7 @@
+# Pinned to match Herdr (S9 reuses its crates). Build through rustup's proxy,
+# ~/.cargo/bin/cargo; Homebrew's /usr/local/bin/cargo (1.89) ignores this file
+# and is rejected by `rust-version` in Cargo.toml.
+[toolchain]
+channel = "1.96.1"
+profile = "minimal"
+components = ["clippy", "rustfmt"]

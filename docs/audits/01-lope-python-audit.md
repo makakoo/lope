@@ -99,6 +99,8 @@ All runtime state paths above are in `~/.lope/.gitignore`. `~/.lope` is a git ch
 
 ## 4. Configuration rules (`config.py`)
 
+- **`LOPE_HOME` resolution is inconsistent (found in S0).** `jobs.py:56` and `runlock.py:36` use `os.environ.get("LOPE_HOME") or ~/.lope`, so an empty value means the default. `config.py:66`, `journal.py:29`, `latency.py:75`, `trust.py:41` and `auditor.py:38` use `os.environ.get("LOPE_HOME", default)`, so an empty value becomes `""` and paths become cwd-relative. S1 must decide whether Rust reproduces this per file (parity) or treats empty as unset everywhere (DEC needed).
+
 - `_parse_dict` returns `None` for any file without `"version": 1` (`config.py:76-82`). Such a config is silently ignored.
 - **Recognised keys:** `version, validators (list), primary, timeout, parallel, providers, learned_adapters, run_timeout, allow_unbounded_run, max_calls, max_input_bytes, max_output_bytes, max_chunks, request_policy`.
 - **`save()` writes only the recognised keys** (`config.py:394-433`). Optional keys are omitted when they hold default values. The write takes an exclusive `flock` on `config.json.lock`, writes a temp file, fsyncs, then renames. **Unknown keys are dropped on every save.**
@@ -121,6 +123,7 @@ The full DDL is in [`../reference/python-lope-memory-db-schema.sql`](../referenc
 - **Connection:** WAL and `synchronous=NORMAL` (`memory.py:461-462`), plus the default 5-second connect timeout.
 - **Search:** `LIKE` (`memory.py:662-668`).
 - **Env:** `LOPE_MEMORY=off` disables the store; `LOPE_MEMORY_DB` relocates it.
+- **Location (found in S0):** `$LOPE_MEMORY_DB`, else `$HOME/.lope/memory.db`. It does **not** follow `$LOPE_HOME` (`memory.py:44-46, 75-82`).
 
 ---
 
@@ -158,6 +161,8 @@ The full DDL is in [`../reference/python-lope-memory-db-schema.sql`](../referenc
 - **Live outcomes** (139 call records in `~/.lope/runs`): `ok` 100, `provider_timeout` 27 (claude 18, agy 5, grok 4), `launch_error` 3, `tool_permission_denied` 1, `cancelled` 1. Cleanup results: `clean` 237, `clean:process_group` 28, `cleanup_failed:inspection_unknown` 4.
 
 ---
+
+- **Closeout bug with symlinked ancestors (found in S0, committed code).** `jobs.py:507-522` (`is_owned_path`) resolves the run root but walks the unresolved candidate path upward until it equals that root. If any ancestor of `$LOPE_HOME` is a symlink, the walk passes the root, meets the symlink and rejects the path. `close_run` (`jobs.py:836-872`) then reports "owned scratch cleanup failure", and `cli.py:1930-1938` exits 1 after successful calls. It does not affect `/Users/sebastian/.lope`, which has no symlinked ancestor. Patch set PL-5.
 
 ## 8. Review, findings, deliberation, sprint, flow — facts the spec depends on
 

@@ -46,3 +46,33 @@ Pin a committed parity baseline, stand up a cargo-only workspace, and ship a `lo
 ## Note
 
 From this point the binary can optionally be dogfooded ahead of S8. Installing it at `/usr/local/bin/lope` before PG-1 is unsafe, because `glimmer install` would overwrite it.
+
+## Status (2026-11-07)
+
+**Code complete; gate open.** Evidence: [`docs/evidence/s0-router.txt`](../evidence/s0-router.txt), [`docs/evidence/pins.txt`](../evidence/pins.txt).
+
+| Item | State |
+|---|---|
+| PL-1 (`~/.lope` committed and tagged) | **Open (Sebastian).** Baseline is HEAD `9cffa55` plus a 15-file uncommitted diff, fingerprinted in `pins.txt`. Re-run `tools/parity/dump-python --update`, A1 and A2 at the tag. |
+| `docs/reference/*` at the tag | Waits on PL-1 (current captures are from the same dirty tree). |
+| NFR15 Glimmer baseline | **Not recorded.** The companion test spawns a headless `lope review` (likely real validators). Needs an OK or a fake-`lope` run. |
+| Workspace, toolchain pin | Done. `scripts/cargo` is the build entry point (rustup 1.29 + Homebrew rustc, see the script). |
+| Router: guard, normalisation, coverage, delegation | Done (`crates/lope-compat`). |
+| Native `version`, `--version`, `-V` | Done. |
+| Clap grammar for all 23 verbs | Done. Generated at build time from the argparse capture; the build fails on anything it cannot map. |
+| `tools/parity` (a)–(d) | Done. |
+| A1 | Pass: 48 commands, 347 arguments, 0 differences, empty allow-list. |
+| A2 | See the evidence file. |
+| NFR2 startup | Measured under load (load1 31): `lope version` p50 18.4 ms / p95 21.0 ms, where `/usr/bin/true` measured the same way is p50 15.6 ms. Lope's own cost is about 3 ms, against Python's 622 ms. The absolute budget (p50 < 10 ms) and router overhead (≤ 15 ms) cannot be judged on this loaded machine; re-measure when it is quiet. |
+| Normalisation fuzz | Pass: 400 random argv against the real argparse, 0 failures (`tools/parity/normalise_fuzz.py`). |
+
+**Deviations from the plan text:**
+- A2's test lives in `lope-cli` (`cargo test -p lope-cli --test delegation_fidelity`), because it needs the `lope` binary. The master sprint is updated.
+- The nesting guard runs before normalisation, as in Python (Spec 01 §5 updated).
+- `LOPE_ROUTER_TRACE=1` was added (stderr only) for evidence and debugging.
+- Added `tools/parity/normalise_fuzz.py`, a differential fuzz of DEC-11 against the real argparse.
+
+**Findings handed to later sprints** (details in the evidence file):
+- Python Lope closeout bug when `$LOPE_HOME` has a symlinked ancestor (PL-5; S1/S2 must decide whether Rust reproduces it).
+- `memory.db` lives in `$HOME/.lope`, not `$LOPE_HOME` (S4, FR27).
+- Python modules disagree on an empty `LOPE_HOME` (S1, FR6/FR8).

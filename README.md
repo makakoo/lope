@@ -2,6 +2,8 @@
 
 **Status: plan revision 2 (2026-11-07).** Revision 1 was audited against the live repositories and contained fabricated or wrong claims (invented CLI flags, schemas, paths, defect evidence and Herdr capabilities). It is preserved unchanged in [`archive/v1-2026-11-07-unverified/`](archive/v1-2026-11-07-unverified/). Every claim from it is dispositioned, with evidence, in the [verification errata](docs/audits/04-verification-errata-2026-11-07.md).
 
+**Implementation: S0 code complete, S0 gate open (2026-11-07).** The router, normalisation, nesting guard, native `version` and the parity tooling are built and tested (A1 pass, A2 see [`docs/evidence/s0-router.txt`](docs/evidence/s0-router.txt)). S0 cannot close until PL-1 (commit/tag `~/.lope`) is done and A1/A2 are re-run at that tag.
+
 **Goal:** replace Python Lope (`/Users/sebastian/.lope`) with a Rust `lope` binary that is behaviourally compatible with today's callers — Glimmer (`makakoo-jungle`), Makakoo OS (`makakoo-os` / `~/MAKAKOO`), the 17 installed Lope skills, and interactive shells — while fixing verified runtime defects. Selected pieces of Herdr (`/Users/sebastian/projects/apps/herdr`) are reused only where they earn their cost (see [Spec 01 §6](docs/specs/01-product-and-architecture.md#6-herdr-reuse-what-is-taken-and-what-is-not)).
 
 ## Live pins (verified 2026-11-07)
@@ -47,7 +49,26 @@ docs/
 │   └── 04-interfaces-and-protocol.md
 └── sprints/                      S0–S9, strictly serial
 archive/v1-2026-11-07-unverified/ revision 1, unmodified
+Cargo.toml, rust-toolchain.toml   workspace (pinned 1.96.1)
+crates/                           lope-core, lope-compat (router), lope-cli (`lope` binary);
+                                  the other crates are empty placeholders until their sprint
+tools/parity/                     argparse ↔ clap dump + diff (A1), golden-run harness (A2)
+scripts/cargo                     build entry point (see below)
+docs/evidence/                    per-sprint evidence files
 ```
+
+## Building and testing
+
+Always build through `scripts/cargo`. On this Mac, Homebrew's cargo/rustc 1.89 come before rustup's on `PATH`, and rustup 1.29 no longer puts the toolchain first when it runs cargo. A bare `~/.cargo/bin/cargo` therefore still compiles with rustc 1.89, which `rust-version = "1.96"` rejects.
+
+```sh
+scripts/cargo build --release            # target/release/lope
+scripts/cargo test --workspace           # unit + router tests; A2 runs real Python Lope (slow)
+tools/parity/dump-python && tools/parity/dump-rust && tools/parity/diff     # A1
+LOPE_ROUTER_TRACE=1 target/release/lope review notes.md --consensus quorum  # show routing
+```
+
+Router controls: `LOPE_FORCE_PYTHON=1` (delegate everything), `LOPE_FORCE_NATIVE=1` (uncovered → exit 2), `LOPE_PYTHON` (interpreter), `LOPE_ROUTER_TRACE=1`.
 
 ## Hard rules for anyone executing this plan
 

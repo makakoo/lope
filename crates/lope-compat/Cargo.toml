@@ -1,0 +1,21 @@
+[package]
+name = "lope-compat"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+build = "build.rs"
+
+[dependencies]
+lope-core.workspace = true
+clap.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+
+[build-dependencies]
+serde_json.workspace = true
+
+[[bin]]
+name = "lope-parity-dump"
+path = "src/bin/lope-parity-dump.rs"

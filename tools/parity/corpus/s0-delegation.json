@@ -1,0 +1,278 @@
+{
+ "comment": "A2 corpus (S0): invocations that are not native, run through the Rust router and through direct Python Lope in identical sandboxes. Cases with python_argv check DEC-11 normalisation: the Rust argv (as Glimmer sends it) must behave exactly like the canonical Python argv. Mock validators are offline and deterministic.",
+ "cases": [
+  {
+   "name": "no-args-banner-help",
+   "argv": []
+  },
+  {
+   "name": "top-help",
+   "argv": [
+    "--help"
+   ]
+  },
+  {
+   "name": "review-help",
+   "argv": [
+    "review",
+    "--help"
+   ],
+   "expect": {
+    "exit": 0,
+    "stdout_contains": [
+     "--consensus",
+     "--format",
+     "--focus",
+     "--brain-context"
+    ]
+   }
+  },
+  {
+   "name": "negotiate-help",
+   "argv": [
+    "negotiate",
+    "--help"
+   ]
+  },
+  {
+   "name": "version-help",
+   "argv": [
+    "version",
+    "--help"
+   ]
+  },
+  {
+   "name": "flow-lint-alias-help",
+   "argv": [
+    "flow",
+    "lint",
+    "--help"
+   ]
+  },
+  {
+   "name": "usage-unknown-verb",
+   "argv": [
+    "bogus"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "usage-review-missing-file",
+   "argv": [
+    "review"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "usage-bad-choice",
+   "argv": [
+    "review",
+    "x.md",
+    "--format",
+    "yaml"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "usage-mutex",
+   "argv": [
+    "ask",
+    "q",
+    "--run-timeout",
+    "5",
+    "--allow-unbounded-run"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "usage-abbrev-ambiguous",
+   "argv": [
+    "review",
+    "x.md",
+    "--s"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "nesting-guard",
+   "argv": [
+    "status"
+   ],
+   "env": {
+    "LOPE_IMPLEMENTATION_DEPTH": "1"
+   },
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "status",
+   "argv": [
+    "status"
+   ]
+  },
+  {
+   "name": "team-list",
+   "argv": [
+    "team",
+    "list"
+   ]
+  },
+  {
+   "name": "jobs-list",
+   "argv": [
+    "jobs",
+    "list"
+   ]
+  },
+  {
+   "name": "memory-stats",
+   "argv": [
+    "memory",
+    "stats"
+   ]
+  },
+  {
+   "name": "flow-list",
+   "argv": [
+    "flow",
+    "list"
+   ]
+  },
+  {
+   "name": "docs",
+   "argv": [
+    "docs"
+   ]
+  },
+  {
+   "name": "ask-mock-fanout",
+   "argv": [
+    "ask",
+    "What is 2+2?"
+   ]
+  },
+  {
+   "name": "ask-abbrev-flag",
+   "argv": [
+    "ask",
+    "What is 2+2?",
+    "--valid",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "pipe-stdin",
+   "argv": [
+    "pipe"
+   ],
+   "stdin": "Summarise: the sky is blue."
+  },
+  {
+   "name": "vote-mock",
+   "argv": [
+    "vote",
+    "Pick one",
+    "--options",
+    "red,blue"
+   ]
+  },
+  {
+   "name": "review-markdown",
+   "argv": [
+    "review",
+    "x.md",
+    "--format",
+    "markdown"
+   ],
+   "files": {
+    "x.md": "# Notes\n\nShip the router first.\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   }
+  },
+  {
+   "name": "glimmer-review-consensus-quorum",
+   "argv": [
+    "review",
+    "x.md",
+    "--consensus",
+    "quorum",
+    "--format",
+    "markdown"
+   ],
+   "python_argv": [
+    "review",
+    "x.md",
+    "--consensus",
+    "--format",
+    "markdown"
+   ],
+   "files": {
+    "x.md": "# Notes\n\nShip the router first.\n"
+   },
+   "expect": {
+    "exit": 0
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   }
+  },
+  {
+   "name": "glimmer-negotiate-rounds",
+   "argv": [
+    "negotiate",
+    "Add a health endpoint",
+    "--domain",
+    "engineering",
+    "--rounds",
+    "1"
+   ],
+   "python_argv": [
+    "negotiate",
+    "Add a health endpoint",
+    "--domain",
+    "engineering",
+    "--max-rounds",
+    "1"
+   ],
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit_not": 2
+   },
+   "comment": "Exit 1 on both sides: the mock drafter cannot write `### Phase N:` blocks, so Python's negotiator escalates. The S0 criterion is that Glimmer's --rounds argv no longer exits 2."
+  },
+  {
+   "name": "flow-init-writes-state",
+   "argv": [
+    "flow",
+    "init"
+   ]
+  },
+  {
+   "name": "symlinked-lope-home-closeout-bug",
+   "comment": "Python Lope bug (jobs.py:507-522): with a symlinked ancestor in LOPE_HOME every validator run ends 'owned scratch cleanup failure', exit 1. Delegation must reproduce it exactly; S2 decides the native behaviour.",
+   "argv": [
+    "ask",
+    "What is 2+2?"
+   ],
+   "symlink_root": true,
+   "expect": {
+    "exit": 1
+   }
+  }
+ ]
+}

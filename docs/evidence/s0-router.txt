@@ -1,0 +1,155 @@
+# S0 evidence — router, normalisation, parity tooling
+generated 2026-11-07T15:13:33Z by scripts/s0-evidence.sh
+baseline: Python Lope at ~/.lope, PROVISIONAL (PL-1 open; see pins.txt)
+
+## Build
+cargo 1.96.1 (356927216 2026-06-26) / rustc 1.96.1 (31fca3adb 2026-06-26)
+target/release/lope: 727152 bytes, Mach-O 64-bit executable x86_64
+lope 2.0.0 (super-lope; compat 0.17.3)
+
+## Native coverage table
+fingerprint fnv64:711f640615c41801
+S0       lope version                  args: []
+
+## A1 — argparse vs clap (tools/parity/dump-python && dump-rust && diff)
+dump-python: "lope_version":"0.17.3" from /Users/sebastian/.lope -> tools/parity/out/python.json
+dump-rust: clap projection -> tools/parity/out/rust.json
+python-lope 0.17.3 (argparse) vs super-lope clap grammar (captured from 0.17.3)
+compared 48 commands, 347 arguments
+result: PASS (0 differences, 0 allow-listed)
+a1-exit=0
+
+## A2 — delegation fidelity (cargo test -p lope-cli --test delegation_fidelity)
+     Running tests/delegation_fidelity.rs (target/debug/deps/delegation_fidelity-ff86681d61a2679b)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS no-args-banner-help                exit=0   files=1   rust=12.09s python=6.23s attempt=1
+PASS top-help                           exit=0   files=1   rust=8.64s python=7.34s attempt=1
+PASS review-help                        exit=0   files=1   rust=7.89s python=6.08s attempt=1
+PASS negotiate-help                     exit=0   files=1   rust=7.84s python=6.69s attempt=1
+PASS version-help                       exit=0   files=1   rust=7.26s python=4.22s attempt=1
+PASS flow-lint-alias-help               exit=0   files=1   rust=2.92s python=3.27s attempt=1
+PASS usage-unknown-verb                 exit=2   files=1   rust=2.49s python=1.82s attempt=1
+PASS usage-review-missing-file          exit=2   files=1   rust=2.72s python=2.21s attempt=1
+PASS usage-bad-choice                   exit=2   files=1   rust=2.56s python=2.54s attempt=1
+PASS usage-mutex                        exit=2   files=1   rust=2.52s python=1.65s attempt=1
+PASS usage-abbrev-ambiguous             exit=2   files=1   rust=3.76s python=3.14s attempt=1
+PASS nesting-guard                      exit=2   files=1   rust=0.02s python=3.29s attempt=1
+PASS status                             exit=0   files=1   rust=2.64s python=2.04s attempt=1
+PASS team-list                          exit=0   files=1   rust=2.64s python=1.98s attempt=1
+PASS jobs-list                          exit=0   files=1   rust=3.03s python=2.96s attempt=1
+PASS memory-stats                       exit=0   files=4   rust=4.77s python=8.09s attempt=1
+PASS flow-list                          exit=0   files=1   rust=7.68s python=5.83s attempt=1
+PASS docs                               exit=0   files=1   rust=5.87s python=5.16s attempt=1
+PASS ask-mock-fanout                    exit=0   files=4   rust=20.95s python=14.77s attempt=1
+PASS ask-abbrev-flag                    exit=0   files=4   rust=6.89s python=4.53s attempt=1
+PASS pipe-stdin                         exit=0   files=4   rust=5.91s python=6.12s attempt=1
+PASS vote-mock                          exit=1   files=4   rust=9.46s python=8.12s attempt=1
+PASS review-markdown                    exit=0   files=5   rust=8.47s python=9.84s attempt=1
+PASS glimmer-review-consensus-quorum    exit=0   files=5   rust=9.31s python=7.85s attempt=1
+PASS glimmer-negotiate-rounds           exit=1   files=5   rust=13.63s python=14.01s attempt=1
+PASS flow-init-writes-state             exit=0   files=2   rust=2.53s python=1.89s attempt=1
+PASS symlinked-lope-home-closeout-bug   exit=1   files=4   rust=9.76s python=7.16s attempt=1 (python closeout warning seen)
+golden-run: 27/27 cases identical
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 328.42s
+cargo-test-exit=0
+
+## DEC-11 normalisation fuzz (tools/parity/normalise_fuzz.py, real argparse oracle)
+normalise-fuzz: {"cases": 400, "unchanged": 313, "rewritten": 84, "rejected": 3}
+result: PASS (0 failures)
+fuzz-exit=0
+
+## Unit and router tests (scripts/cargo test --workspace, excluding A2)
+34 tests passed, 0 failed:
+  coverage::tests::version_is_native_only_without_arguments ... ok
+  grammar::tests::flow_validate_has_lint_alias ... ok
+  coverage::tests::every_entry_exists_in_the_python_grammar ... ok
+  delegate::tests::interpreter_resolution ... ok
+  grammar::tests::glimmer_checked_review_flags_exist ... ok
+  grammar::tests::grammar_has_all_23_verbs ... ok
+  normalize::tests::negative_numbers_are_values ... ok
+  normalize::tests::glimmer_council_runner_argv ... ok
+  normalize::tests::quorum_kept_when_it_is_the_file ... ok
+  normalize::tests::negotiate_rounds_alias ... ok
+  normalize::tests::only_the_exact_consensus_token_is_normalised ... ok
+  normalize::tests::unanimous_and_any_are_rejected ... ok
+  normalize::tests::version_flags ... ok
+  route::tests::everything_else_delegates_with_normalised_argv ... ok
+  route::tests::oq1_modes_exit_2 ... ok
+  route::tests::nesting_guard_comes_first ... ok
+  route::tests::force_flags ... ok
+  route::tests::version_is_native ... ok
+  parser::tests::parses_glimmer_argv_after_normalisation ... ok
+  parser::tests::aliases_abbreviations_and_nesting ... ok
+  parser::tests::errors_mean_delegate ... ok
+  parser::tests::full_tree_builds_and_passes_clap_debug_asserts ... ok
+  result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  paths::tests::lope_home_rules ... ok
+  env::tests::truthy_follows_python_set ... ok
+  env::tests::depth_matches_python_int_semantics ... ok
+  tests::first_version_match_is_product_version ... ok
+  result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  native::tests::every_covered_path_has_an_implementation ... ok
+  result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+  fr23_oq1_modes_exit_2_before_delegation ... ok
+  router_trace ... ok
+  a1_version_forms_are_native_and_glimmer_parsable ... ok
+  fr4_nesting_guard_matches_python_byte_for_byte ... ok
+  fr5_force_flags_and_exec_failure ... ok
+  delegated_exit_status_and_signals_are_pythons ... ok
+  fr5_delegation_execs_python_with_normalised_argv ... ok
+  result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.40s
+
+## NFR2 startup (scripts/bench-version.py)
+runs=20  load1=31.0  cpus=8  ** HEAVY LOAD: not comparable to NFR2 budgets **
+rust  lope version (native)              p50=    18.4 ms  p95=    21.0 ms  min=    14.4 ms
+baseline /usr/bin/true (spawn floor)     p50=    15.6 ms  p95=    25.5 ms  min=    13.1 ms
+python lope version                      p50=   622.3 ms  p95=   858.8 ms  min=   496.3 ms
+rust  lope version --help (delegated)    p50=   557.1 ms  p95=   707.2 ms  min=   518.1 ms
+python lope version --help               p50=   715.7 ms  p95=  1148.4 ms  min=   554.4 ms
+router overhead on delegation: p50 diff -158.6 ms, min diff -36.3 ms (budget <= 15 ms)
+native version above spawn floor: p50 +2.8 ms
+(Measured with Python subprocess timing on a loaded machine. Lope's own cost is the
+ difference from the /usr/bin/true floor. The absolute NFR2 budgets and the router
+ overhead budget need a re-measure on a quiet machine.)
+
+## Findings (handed to later sprints)
+F1  Python Lope closeout bug, committed code (jobs.py:507-522 is_owned_path). If any
+    ancestor of $LOPE_HOME is a symlink (macOS /var -> /private/var), every run with
+    validator calls ends "owned scratch cleanup failure" and exits 1 after successful
+    calls. Pinned by A2 case symlinked-lope-home-closeout-bug; proposed fix PL-5
+    (Spec 04 §8). ~/.lope on this machine has no symlinked ancestor, so it is unaffected.
+    S1/S2 must decide whether native Rust reproduces or fixes it.
+F2  memory.db is at $LOPE_MEMORY_DB, else $HOME/.lope/memory.db, independent of $LOPE_HOME
+    (memory.py:44-46, 75-82). Matters for S4 (FR27, A12) and for sandboxed tests.
+F3  An empty LOPE_HOME is treated differently across Python modules: `or` in
+    jobs.py/runlock.py vs `.get(default)` in config/journal/latency/trust/auditor.
+    S1 needs a decision.
+F4  --consensus and --structured are two store_true actions sharing dest `consensus`,
+    not argparse aliases. Equivalent behaviour; the clap grammar mirrors it.
+F5  Python Lope prints timer-driven "heartbeat:" lines on stderr (progress.py:105);
+    A2 drops them before comparing.
+F6  Build: rustup 1.29 no longer puts the toolchain first when it runs cargo, and
+    Homebrew rustc 1.89 is earlier on PATH. scripts/cargo fixes this.
+
+## Open before the S0 gate can close
+- PL-1 (Sebastian): commit/tag ~/.lope. Then: tools/parity/dump-python --update,
+  regenerate docs/reference/*, re-run A1/A2, regenerate this file.
+- NFR15 Glimmer baseline: not run (see pins.txt). Needs an OK or a fake-lope run.
+- NFR2 re-measure on a quiet machine.
