@@ -1,0 +1,52 @@
+# S2 evidence — Tier 2 supervised runtime and completion policy
+generated 2026-11-07T17:03:59Z
+
+## Design (as built)
+- Parent (lope_runtime::call::run_subprocess_group) -> supervisor process (the lope binary
+  re-executed with argv0 'lope-supervisor'; no CLI surface added) -> provider in its own
+  session/process group. Control pipe EOF = owner died -> supervisor SIGKILLs the group
+  (tested). Supervisor SIGTERM handler kills the group syscall-only, as in Python.
+- Event-driven: reader/writer/waitpid threads feed a channel; no sleep-polling except the
+  bounded post-exit group confirmation (killpg(pgid,0) with 5->50 ms back-off) (NFR3).
+- Completion policy = Python's fail-closed policy with a 2.0 s cleanup budget
+  (LOPE_CLEANUP_BUDGET_SECONDS, additive). Post-exit: probe group; if non-empty TERM,
+  200 ms grace, KILL, confirm. Result strings identical to supervisor.py.
+- The parent passes its absolute deadline (spec key deadline_at) so the supervisor
+  classifies provider_timeout itself; the parent's reserve is budget+0.5 s (Python: 1.0 s
+  for a 0.7 s budget).
+- FR12: provider_timeout / cancelled write a 0600 JSON sidecar under runs/diag/
+  (outside runs/work/<run>, which Python's closeout requires to be empty), with bytes per
+  stream, seconds since last byte, leader alive + ps state, group probe and a <=4 KiB
+  redacted stderr tail. The call manifest gets diag_path (A4 proved extra fields are
+  tolerated). Pruned after 7 days (lope_runtime::diag::prune).
+
+## Tests (cargo test -p lope-runtime)
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+A5 wall per call: p50=0.083s p95=0.117s max=5.115s unverified=0
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 9.33s
+A6 took 2.287s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.29s
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.42s
+  A5 completion_policy: lingering same-group child reaped, call ok, 50 runs, 0 UNVERIFIED
+  A6 escaped_pipe_holder: setsid'd pipe holder -> UNVERIFIED output_drain_timeout + metadata, no hang
+  A7 timeout_diagnostics: 0600 redacted .diag, no forbidden manifest keys, Python jobs list --json parses the run, Rust closes it
+  + parent_death_kills_the_provider_group, ordinary_outcomes (stdin, exit code, markers,
+    output_limit head/tail, FileNotFoundError text, argv policy limit), bounded::head_and_tail
+  + lope-cli router_cli::lope_binary_doubles_as_the_supervisor
+
+## Group-confirmation latency (DEC-4 budget evidence)
+cleanup_latency: n=100 load1=14.4
+  post-exit cleanup seconds: min=0.0051 p50=0.0056 p90=0.0071 p95=0.0076 p99=0.0077 max=0.0081
+  calls over 0.7 s (Python's budget, would be UNVERIFIED): 0
+  calls over 2.0 s (Super Lope default budget): 0
+  outcomes: {"ok/clean": 100}
+python supervisor: n=30 load1=15.4 outcomes={'ok/clean': 30} wall p50=0.499s max=1.764s
+Interpretation: on this Intel Mac the confirmation itself takes ~5-8 ms once launchd
+reaps the killed children; the earlier A5 runs at load average ~60-100 showed p95 call
+wall time 0.1 s and zero false UNVERIFIED. 2.0 s keeps >200x headroom over the measured
+p99 while bounding the worst case. Python's 0.7 s budget also passed at load ~15; the D1
+false-UNVERIFIED pattern needs heavy load, which the larger budget absorbs.
+
+## Not in S2 (moved with their callers)
+- FR9 run deadline (exit 124) and run-lock use by verbs: S4, with the run context/budget.
+- FR13 signal handling is implemented as lope_runtime::signals; verbs adopt it in S4.

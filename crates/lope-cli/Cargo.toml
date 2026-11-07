@@ -14,6 +14,7 @@ path = "src/main.rs"
 lope-core.workspace = true
 lope-compat.workspace = true
 lope-state.workspace = true
+lope-runtime.workspace = true
 serde_json.workspace = true
 clap.workspace = true
 

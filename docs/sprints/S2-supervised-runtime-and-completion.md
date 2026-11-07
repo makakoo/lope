@@ -27,3 +27,7 @@ Build Tier 2 (DEC-2): one-shot CLI validators over pipes with the fail-closed co
 - A5, A6 and A7 pass, and A5 is repeated 50× on the Intel Mac with zero false `UNVERIFIED`.
 - Measure the group-confirmation latency distribution on the Intel Mac and record it. It justifies the default cleanup budget.
 - Evidence: `docs/evidence/s2-runtime.txt`.
+
+## Status (2026-11-07)
+
+**Closed.** Evidence: [`docs/evidence/s2-runtime.txt`](../evidence/s2-runtime.txt). A5 (50×, zero false UNVERIFIED), A6 and A7 pass; parent death kills the provider group; latency distribution recorded. Deviations: the supervisor is a separate process (the `lope` binary under argv0 `lope-supervisor`) to keep Python's owner-SIGKILL safety; `.diag` files live in `runs/diag/` because Python's closeout requires empty work dirs; FR9/FR13 adoption by verbs happens in S4.

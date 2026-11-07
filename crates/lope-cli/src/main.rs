@@ -9,6 +9,14 @@ use std::ffi::OsString;
 use std::process::exit;
 
 fn main() {
+    // `lope` re-executes itself as the provider supervisor (argv0 trick, so
+    // no CLI surface is added). See lope_runtime::supervisor.
+    if let Some(argv0) = std::env::args_os().next() {
+        if lope_runtime::call::is_supervisor_invocation(&argv0) {
+            let args: Vec<String> = std::env::args().skip(1).collect();
+            exit(lope_runtime::supervisor::main(&args));
+        }
+    }
     let args: Vec<OsString> = std::env::args_os().skip(1).collect();
     let (route, rewrites) = route::route(args, &RouterEnv::from_process());
     if lope_core::env::flag("LOPE_ROUTER_TRACE") {

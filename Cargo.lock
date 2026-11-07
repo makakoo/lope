@@ -223,6 +223,7 @@ dependencies = [
  "clap",
  "lope-compat",
  "lope-core",
+ "lope-runtime",
  "lope-state",
  "serde_json",
  "tempfile",
@@ -294,7 +295,13 @@ dependencies = [
 name = "lope-runtime"
 version = "2.0.0"
 dependencies = [
+ "libc",
  "lope-core",
+ "lope-state",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "uuid",
 ]
 
 [[package]]

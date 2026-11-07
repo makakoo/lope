@@ -46,6 +46,11 @@ pub fn run_with_timeout(cmd: &mut Command, timeout: Duration) -> Option<(bool, S
 /// `process_start_fingerprint(pid)`: `proc:<starttime>` on Linux, else
 /// `ps:<lstart, whitespace-normalised>`.
 pub fn start_fingerprint(pid: i64) -> Option<String> {
+    start_fingerprint_timeout(pid, Duration::from_secs(2))
+}
+
+/// `process_start_fingerprint(pid, timeout=...)`.
+pub fn start_fingerprint_timeout(pid: i64, timeout: Duration) -> Option<String> {
     if pid <= 0 {
         return None;
     }
@@ -56,10 +61,7 @@ pub fn start_fingerprint(pid: i64) -> Option<String> {
             }
         }
     }
-    let (ok, out) = run_with_timeout(
-        Command::new(ps_bin()).args(["-p", &pid.to_string(), "-o", "lstart="]),
-        Duration::from_secs(2),
-    )?;
+    let (ok, out) = run_with_timeout(Command::new(ps_bin()).args(["-p", &pid.to_string(), "-o", "lstart="]), timeout)?;
     let value = out.trim();
     if ok && !value.is_empty() {
         Some(format!("ps:{}", value.split_whitespace().collect::<Vec<_>>().join(" ")))
@@ -115,6 +117,11 @@ fn python_platform() -> String {
 /// `process_identity(pid)`.
 pub fn identity(pid: i64) -> Value {
     json!({ "pid": pid, "start_fingerprint": start_fingerprint(pid) })
+}
+
+/// `process_identity(pid, timeout=...)` (the supervisor uses 0.3 s).
+pub fn identity_timeout(pid: i64, timeout: Duration) -> Value {
+    json!({ "pid": pid, "start_fingerprint": start_fingerprint_timeout(pid, timeout) })
 }
 
 fn as_pid(v: Option<&Value>) -> Option<i64> {
