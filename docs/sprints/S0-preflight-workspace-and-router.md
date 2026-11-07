@@ -49,13 +49,13 @@ From this point the binary can optionally be dogfooded ahead of S8. Installing i
 
 ## Status (2026-11-07)
 
-**Code complete; gate open.** Evidence: [`docs/evidence/s0-router.txt`](../evidence/s0-router.txt), [`docs/evidence/pins.txt`](../evidence/pins.txt).
+**Closed 2026-11-07** (NFR2 re-measure on a quiet machine still to do; it does not block S1). Evidence: [`docs/evidence/s0-router.txt`](../evidence/s0-router.txt), [`docs/evidence/pins.txt`](../evidence/pins.txt).
 
 | Item | State |
 |---|---|
-| PL-1 (`~/.lope` committed and tagged) | **Open (Sebastian).** Baseline is HEAD `9cffa55` plus a 15-file uncommitted diff, fingerprinted in `pins.txt`. Re-run `tools/parity/dump-python --update`, A1 and A2 at the tag. |
-| `docs/reference/*` at the tag | Waits on PL-1 (current captures are from the same dirty tree). |
-| NFR15 Glimmer baseline | **Not recorded.** The companion test spawns a headless `lope review` (likely real validators). Needs an OK or a fake-`lope` run. |
+| PL-1 (`~/.lope` committed and tagged) | Done: tag `super-lope-baseline-0.17.3` snapshots the working tree without moving `main` or touching the WIP files. |
+| `docs/reference/*` at the tag | Done (`tools/parity/capture-reference`, from a `git archive` of the tag). |
+| NFR15 Glimmer baseline | Done: 71 tests, 70 pass; the one failure is the known v0.17.2 pin (`tools/parity/glimmer-baseline`, mock-validator sandbox). |
 | Workspace, toolchain pin | Done. `scripts/cargo` is the build entry point (rustup 1.29 + Homebrew rustc, see the script). |
 | Router: guard, normalisation, coverage, delegation | Done (`crates/lope-compat`). |
 | Native `version`, `--version`, `-V` | Done. |

@@ -2,7 +2,7 @@
 
 **Status: plan revision 2 (2026-11-07).** Revision 1 was audited against the live repositories and contained fabricated or wrong claims (invented CLI flags, schemas, paths, defect evidence and Herdr capabilities). It is preserved unchanged in [`archive/v1-2026-11-07-unverified/`](archive/v1-2026-11-07-unverified/). Every claim from it is dispositioned, with evidence, in the [verification errata](docs/audits/04-verification-errata-2026-11-07.md).
 
-**Implementation: S0 code complete, S0 gate open (2026-11-07).** The router, normalisation, nesting guard, native `version` and the parity tooling are built and tested (A1 pass, A2 see [`docs/evidence/s0-router.txt`](docs/evidence/s0-router.txt)). S0 cannot close until PL-1 (commit/tag `~/.lope`) is done and A1/A2 are re-run at that tag.
+**Implementation progress:** see [`docs/sprints/README.md`](docs/sprints/README.md) and `docs/evidence/`. S0 closed 2026-11-07.
 
 **Goal:** replace Python Lope (`/Users/sebastian/.lope`) with a Rust `lope` binary that is behaviourally compatible with today's callers — Glimmer (`makakoo-jungle`), Makakoo OS (`makakoo-os` / `~/MAKAKOO`), the 17 installed Lope skills, and interactive shells — while fixing verified runtime defects. Selected pieces of Herdr (`/Users/sebastian/projects/apps/herdr`) are reused only where they earn their cost (see [Spec 01 §6](docs/specs/01-product-and-architecture.md#6-herdr-reuse-what-is-taken-and-what-is-not)).
 

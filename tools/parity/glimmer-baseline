@@ -1,0 +1,35 @@
+#!/bin/sh
+# NFR15: run Glimmer's node:test suites (tests/companion, tests/s2..s8) with
+# LOPE_HOME pointing at a sandbox (symlinked Python Lope code + mock-validator
+# config), so any `lope` they start (/usr/local/bin/lope honours LOPE_HOME)
+# calls offline mocks and touches only sandbox state, never ~/.lope/runs.
+# Usage: tools/parity/glimmer-baseline [OUTFILE]
+set -eu
+here=$(cd "$(dirname "$0")" && pwd)
+jungle=${GLIMMER_REPO:-$(cd "$here/../../../makakoo-jungle" && pwd)}
+out=${1:-$here/out/glimmer-baseline.txt}
+sandbox=$(/usr/bin/python3 -c 'import os,tempfile; print(os.path.realpath(tempfile.mkdtemp(prefix="glimmer-baseline-")))')
+trap 'rm -rf "$sandbox"' EXIT
+/usr/bin/python3 -I - "$sandbox" "${LOPE_HOME:-$HOME/.lope}" <<'PY'
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.abspath("tools/parity/golden_run.py")))
+import importlib.util
+spec = importlib.util.spec_from_file_location("golden_run", "tools/parity/golden_run.py")
+g = importlib.util.module_from_spec(spec); spec.loader.exec_module(g)
+base, src = sys.argv[1], os.path.realpath(sys.argv[2])
+os.rmdir(base)
+g.build_sandbox(base, {"name": "glimmer"}, src, g.tracked_top_level(src))
+PY
+cd "$jungle"
+{
+  echo "# Glimmer test baseline (NFR15) — $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "# makakoo-jungle $(git rev-parse HEAD); lope on PATH: $(command -v lope) -> $(head -3 "$(command -v lope)" | tail -1)"
+  echo "# LOPE_HOME sandbox with offline mock validators; load: $(uptime | sed 's/.*load averages*: //')"
+  for t in tests/companion tests/s2 tests/s3 tests/s4 tests/s5 tests/s6 tests/s7 tests/s8; do
+    echo "## $t"
+    LOPE_HOME="$sandbox/lope-home" PATH="$sandbox/mockbin:/usr/local/bin:$PATH" \
+      node --test --test-reporter=spec "$t"/*.test.js 2>&1 | sed 's/\x1b\[[0-9;]*m//g' || true
+  done
+} > "$out"
+echo "glimmer-baseline: $out"
+grep -E '^ℹ (tests|pass|fail)' "$out" | paste - - - | sed 's/ℹ //g'

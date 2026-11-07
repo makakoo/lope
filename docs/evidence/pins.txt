@@ -1,4 +1,4 @@
-# S0 pins — recorded 2026-11-07 (PROVISIONAL: PL-1 not done)
+# S0 pins — recorded 2026-11-07 (PL-1 done via tag; see below)
 
 ## Python Lope (parity baseline)
 path        /Users/sebastian/.lope
@@ -6,8 +6,13 @@ HEAD        9cffa551e48797051004e81f017aa427e71f5552  (v0.16.0-4-g9cffa55)
 version     0.17.3
 dirty       15 modified tracked files, 0 untracked outside .gitignore
 diff sha256 f7133f264da1f243c7dd1ee0e4026d2e467c97f61c503d4a0f795fff995180c1  (git diff of the working tree)
-status      PL-1 OPEN: the baseline is HEAD + the uncommitted diff above. Re-capture
-            docs/reference/*, crates/lope-compat/grammar/ and re-run A1/A2 at the PL-1 tag.
+PL-1        DONE 2026-11-07: annotated tag super-lope-baseline-0.17.3 -> commit 9721b1e6b0d2
+            (tree 4783b17bfbae == the working tree above, parent 9cffa55). Created with a
+            temporary index: branch main, the real index and the 15 modified files are
+            untouched, and nothing was pushed. `git -C ~/.lope diff super-lope-baseline-0.17.3`
+            is empty. docs/reference/* regenerated from a `git archive` of the tag
+            (tools/parity/capture-reference); the argparse dump of the export equals the
+            grammar compiled into lope-compat.
 interpreter /usr/bin/python3 3.9.6
 
 ## Other repositories
@@ -49,11 +54,11 @@ host: x86_64 macOS 15.7.9, Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz
 node: v22.22.3
 
 ## Glimmer test baseline (NFR15)
-NOT RECORDED. Two reasons:
-  1. tests/companion/companion.test.js:451-461 has the companion server spawn a headless
-     `lope review` and asserts a child pid. With the live ~/.lope/config.json that review
-     would most likely fan out to the real validator team (not verified, deliberately not
-     run). Needs Sebastian's OK, or a run with a fake `lope` first on PATH.
-  2. Load average was 220-340 during S0, so timing-based Glimmer tests would be flaky.
-Known pre-existing failures (Audit 03 §1.6): watched-council.test.js:290 (v0.17.2 pin),
-zsh PIPESTATUS exit capture, countActiveSlots slot leak.
+Recorded 2026-11-07 with tools/parity/glimmer-baseline: node --test over tests/companion
+and tests/s2..s8, with LOPE_HOME = a sandbox with offline mock validators, so the headless
+`lope review` the companion test starts never reached real validators or ~/.lope/runs.
+Full log: docs/evidence/glimmer-baseline-2026-11-07.txt
+  tests 71, pass 70, fail 1
+  only failure: tests/s3/watched-council.test.js:290 "Must be clean Lope v0.17.2 pin"
+  (known pre-existing failure, Audit 03 §1.6). Other known issues (zsh PIPESTATUS,
+  countActiveSlots leak) are not exercised by these suites.
