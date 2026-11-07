@@ -212,6 +212,61 @@
     "--options",
     "4,says"
    ]
+  },
+  {
+   "name": "compare-basic",
+   "argv": [
+    "compare",
+    "a.md",
+    "b.md"
+   ],
+   "files": {
+    "a.md": "# A\n\nFirst version.\n",
+    "b.md": "# B\n\nSecond version, caf\u00e9.\n"
+   }
+  },
+  {
+   "name": "compare-criteria-json",
+   "argv": [
+    "compare",
+    "a.md",
+    "b.md",
+    "--criteria",
+    " brevity ",
+    "--json"
+   ],
+   "files": {
+    "a.md": "# A\n\nFirst version.\n",
+    "b.md": "# B\n\nSecond version, caf\u00e9.\n"
+   }
+  },
+  {
+   "name": "compare-missing-b",
+   "argv": [
+    "compare",
+    "a.md",
+    "nope.md"
+   ],
+   "files": {
+    "a.md": "# A\n\nFirst version.\n",
+    "b.md": "# B\n\nSecond version, caf\u00e9.\n"
+   }
+  },
+  {
+   "name": "compare-failing",
+   "argv": [
+    "compare",
+    "a.md",
+    "b.md"
+   ],
+   "files": {
+    "a.md": "# A\n\nFirst version.\n",
+    "b.md": "# B\n\nSecond version, caf\u00e9.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-fail"
+   ]
   }
  ]
 }

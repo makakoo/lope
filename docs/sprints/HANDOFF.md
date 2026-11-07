@@ -10,7 +10,7 @@ Last updated 2026-11-07. Read this first when resuming the port.
 | S1 config, state, native `status` + `jobs` | **closed** | `docs/evidence/s1-core-state.txt` |
 | S2 supervised runtime, completion policy | **closed** | `docs/evidence/s2-runtime.txt` |
 | S3 providers + team | **partly done**: verdict parser, diagnostics, retry, budget/lease/context, latency, progress, invocation, DIRECT request plan, generic subprocess + claude/codex/gemini built-ins, pool builder. Not yet: `team *`, `configure`, opencode/aider built-ins, http providers, makakoo adapters, curl parser | `docs/evidence/s3-s4-progress.txt` |
-| S4 single-shot verbs | **partly done**: native `ask`, `pipe`, `vote` (23/23 golden). Not yet: `compare`, `review`, `memory`, `--synth`, chunked plans | same |
+| S4 single-shot verbs | **partly done**: native `ask`, `pipe`, `vote`, `compare` (27/27 golden). Not yet: `review`, `memory`, `--synth`, chunked plans | same |
 | S5–S7 | not started | — |
 | S8 cutover | not started; needs OQ-2/OQ-3 defaults and patch sets | — |
 | S9 PTY pool | gated: needs OQ-4 approval based on ≥ 7 days of FR12 `.diag` evidence, which only accumulates after cutover. Cannot be finished in one session by design. | — |
@@ -24,7 +24,7 @@ Last updated 2026-11-07. Read this first when resuming the port.
 
 ## Next steps (in order)
 
-1. `compare` on top of `native/ask.rs::prepare` + `vote.rs` (options {A,B}, criteria prompt; reads two files).
+1. (done) compare.
 2. `team list|enable|disable|remove` (config writes via `lope_core::config::save`; Python messages from `cli.py:4795-5274`).
 3. `review` single-shot (text/json/markdown formats first; consensus/SARIF/memory after), then `memory *` (rusqlite, bundled; schema in docs/reference).
 4. Remaining S3 sources (opencode export fallback, aider prompt files, http via a worker, makakoo adapters).

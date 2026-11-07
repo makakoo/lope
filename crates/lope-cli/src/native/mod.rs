@@ -2,6 +2,7 @@
 //! paths listed in lope_compat::coverage reach this module.
 
 mod ask;
+mod compare;
 mod discover;
 mod fanout;
 mod jobs;
@@ -72,6 +73,7 @@ pub fn run(inv: &Invocation) -> Native {
         ["ask"] => ask::run(&inv.matches),
         ["pipe"] => ask::run_pipe(&inv.matches),
         ["vote"] => vote::run(&inv.matches),
+        ["compare"] => compare::run(&inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
