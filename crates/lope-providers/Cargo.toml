@@ -7,5 +7,15 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-lope-runtime.workspace = true
+lope-core.workspace = true
 lope-state.workspace = true
+lope-runtime.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+fancy-regex.workspace = true
+sha2.workspace = true
+uuid.workspace = true
+libc.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true
