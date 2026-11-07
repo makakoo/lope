@@ -13,7 +13,6 @@ S1       lope jobs kill                args: [run_id, --json]
 S4       lope ask                      args: [question, --json, --context, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
 S4       lope pipe                     args: [--require-all, --json, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
 
-## Golden runs: native ask/pipe vs Python (tools/parity/corpus/s4-ask.json)
 golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
 PASS ask-basic                          native   exit=0   files=4   rust=4.89s python=11.49s attempt=1
 PASS ask-json                           native   exit=0   files=4   rust=2.76s python=15.40s attempt=1
@@ -41,3 +40,29 @@ something not ported (http/makakoo providers, opencode/aider built-ins, prompt_w
 fields, chunked/rejected request plans, --synth/--anonymous/--brain-*, first-run setup).
 pipe replays the stdin it already consumed to Python through a pipe (case
 pipe-http-provider-replays-stdin, route=handback, identical output).
+## Golden runs (ask, pipe, vote)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS ask-basic                          native   exit=0   files=4   rust=9.37s python=26.47s attempt=1
+PASS ask-json                           native   exit=0   files=4   rust=4.21s python=29.47s attempt=1
+PASS ask-context                        native   exit=0   files=4   rust=4.53s python=32.20s attempt=1
+PASS ask-sequential                     native   exit=0   files=4   rust=2.44s python=11.62s attempt=1
+PASS ask-one-validator                  native   exit=0   files=4   rust=3.02s python=9.77s attempt=1
+PASS ask-long-preview                   native   exit=0   files=4   rust=2.31s python=12.11s attempt=1
+PASS ask-failing-validator              native   exit=1   files=4   rust=2.17s python=11.94s attempt=1
+PASS ask-unknown-validator              native   exit=0   files=4   rust=2.43s python=7.37s attempt=1
+PASS ask-synth-delegates                delegate exit=0   files=4   rust=10.25s python=15.25s attempt=1
+PASS pipe-basic                         native   exit=0   files=4   rust=2.51s python=15.04s attempt=1
+PASS pipe-json                          native   exit=0   files=4   rust=3.69s python=26.59s attempt=1
+PASS pipe-empty                         native   exit=2   files=1   rust=0.02s python=9.11s attempt=1
+PASS pipe-require-all                   native   exit=1   files=4   rust=4.20s python=36.42s attempt=1
+PASS pipe-synth-replays-stdin           delegate exit=0   files=4   rust=28.79s python=29.53s attempt=1
+PASS pipe-http-provider-replays-stdin   handback exit=1   files=3   rust=28.31s python=24.33s attempt=2
+PASS vote-basic                         native   exit=1   files=4   rust=4.73s python=33.64s attempt=1
+PASS vote-json                          native   exit=1   files=4   rust=4.20s python=27.35s attempt=1
+PASS vote-says-4                        native   exit=0   files=4   rust=3.95s python=25.62s attempt=1
+PASS vote-says-4-json                   native   exit=0   files=4   rust=3.40s python=15.68s attempt=1
+PASS vote-failing                       native   exit=0   files=4   rust=4.87s python=20.72s attempt=1
+PASS vote-one-option                    native   exit=2   files=1   rust=0.03s python=4.53s attempt=1
+PASS vote-dup-options                   native   exit=2   files=1   rust=0.02s python=3.83s attempt=1
+PASS vote-long-prompt                   native   exit=0   files=4   rust=2.10s python=10.94s attempt=1
+golden-run: 23/23 cases identical

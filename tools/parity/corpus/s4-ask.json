@@ -133,6 +133,85 @@
    "stdin": "Q\n",
    "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['providers'].append({'name':'web','type':'http','url':'http://127.0.0.1:9/v1'});json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n",
    "route": "handback"
+  },
+  {
+   "name": "vote-basic",
+   "argv": [
+    "vote",
+    "Pick a color",
+    "--options",
+    "red,blue"
+   ]
+  },
+  {
+   "name": "vote-json",
+   "argv": [
+    "vote",
+    "Pick",
+    "--options",
+    "red,blue",
+    "--json"
+   ]
+  },
+  {
+   "name": "vote-says-4",
+   "argv": [
+    "vote",
+    "What is 2+2",
+    "--options",
+    "3,4,5"
+   ]
+  },
+  {
+   "name": "vote-says-4-json",
+   "argv": [
+    "vote",
+    "What is 2+2",
+    "--options",
+    "3,4,5",
+    "--json"
+   ]
+  },
+  {
+   "name": "vote-failing",
+   "argv": [
+    "vote",
+    "Q",
+    "--options",
+    "4,5"
+   ],
+   "validators": [
+    "mock-a",
+    "mock-fail",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "vote-one-option",
+   "argv": [
+    "vote",
+    "Q",
+    "--options",
+    "red"
+   ]
+  },
+  {
+   "name": "vote-dup-options",
+   "argv": [
+    "vote",
+    "Q",
+    "--options",
+    "Red,red"
+   ]
+  },
+  {
+   "name": "vote-long-prompt",
+   "argv": [
+    "vote",
+    "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy",
+    "--options",
+    "4,says"
+   ]
   }
  ]
 }

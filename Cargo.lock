@@ -247,6 +247,7 @@ name = "lope-cli"
 version = "2.0.0"
 dependencies = [
  "clap",
+ "fancy-regex",
  "libc",
  "lope-compat",
  "lope-core",

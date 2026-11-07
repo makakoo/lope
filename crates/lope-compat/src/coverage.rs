@@ -62,6 +62,26 @@ pub static COVERAGE: &[Coverage] = &[
         ],
         since: "S4",
     },
+    Coverage {
+        path: &["vote"],
+        args: &[
+            "prompt",
+            "--options",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S4",
+    },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {

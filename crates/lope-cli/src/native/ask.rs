@@ -33,12 +33,16 @@ pub fn run_pipe(m: &ArgMatches) -> Native {
     simple_fanout(m, "pipe", prompt, Some(require_all)).with_stdin(buf)
 }
 
-/// Shared body of ask / pipe (DIRECT plans, no --synth/brain flags).
-fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option<bool>) -> Native {
-    let (cfg, pool) = match scope::resolve(m) {
-        Ok(x) => x,
-        Err(reason) => return Native::Delegate(reason),
-    };
+pub struct Prepared {
+    pub cfg: lope_core::config::LopeCfg,
+    pub pool: lope_providers::pool::Pool,
+    pub scope: scope::Scope,
+    pub json_mode: bool,
+}
+
+/// `_ensure_config` + `_plan_external_request` (DIRECT only) + runtime start.
+pub fn prepare(m: &ArgMatches, mode: &str, prompt: &str) -> Result<Prepared, Native> {
+    let (cfg, pool) = scope::resolve(m).map_err(Native::Delegate)?;
     let json_mode = flag(m, "--json");
     let lim = Limits {
         max_chunks: lope_core::config::LopeCfg::int_field(&cfg.max_chunks),
@@ -46,17 +50,15 @@ fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option
         max_input_bytes: lope_core::config::LopeCfg::int_field(&cfg.max_input_bytes),
     };
     let timeout = cfg.timeout_secs() as f64;
-    let plan = plan_direct(&prompt, mode, &pool.validators, &cfg.request_policy, &lim, timeout, pool.parallel, 0);
+    let plan = plan_direct(prompt, mode, &pool.validators, &cfg.request_policy, &lim, timeout, pool.parallel, 0);
     if !plan.direct {
-        return Native::Delegate("request plan is not direct".into());
+        return Err(Native::Delegate("request plan is not direct".into()));
     }
     for w in &pool.warnings {
         eprintln!("{w}");
     }
-    let scope = match scope::start(mode, &cfg, json_mode) {
-        Ok(s) => s,
-        Err(e) => return Native::Delegate(format!("runtime start failed: {e}")),
-    };
+    let scope =
+        scope::start(mode, &cfg, json_mode).map_err(|e| Native::Delegate(format!("runtime start failed: {e}")))?;
     let mut plan_json = plan.json.clone();
     let tv: Vec<(String, Option<i64>)> =
         pool.validators.iter().map(|v| (v.name().to_string(), v.timeout_override())).collect();
@@ -76,6 +78,16 @@ fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option
     for l in &advice {
         eprintln!("{l}");
     }
+    Ok(Prepared { cfg, pool, scope, json_mode })
+}
+
+/// Shared body of ask / pipe (DIRECT plans, no --synth/brain flags).
+fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option<bool>) -> Native {
+    let Prepared { cfg, pool, scope, json_mode } = match prepare(m, mode, &prompt) {
+        Ok(p) => p,
+        Err(n) => return n,
+    };
+    let timeout = cfg.timeout_secs() as f64;
     let mut out = Out::new();
     let names = pool.names();
     if !json_mode {

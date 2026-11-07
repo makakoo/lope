@@ -7,6 +7,7 @@ mod fanout;
 mod jobs;
 mod scope;
 mod status;
+mod vote;
 
 /// Result of a native command: an exit code, or "hand this invocation to
 /// Python" (only before any output or state write).
@@ -70,6 +71,7 @@ pub fn run(inv: &Invocation) -> Native {
         ["jobs", sub] => Native::Exit(jobs::run(Some(sub), &inv.matches)),
         ["ask"] => ask::run(&inv.matches),
         ["pipe"] => ask::run_pipe(&inv.matches),
+        ["vote"] => vote::run(&inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
