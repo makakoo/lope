@@ -6,11 +6,13 @@ mod audit;
 mod compare;
 mod deliberate;
 mod discover;
+mod docs;
 mod execute;
 mod fanout;
 mod flow;
 mod gate;
 mod implement;
+mod install;
 mod jobs;
 mod memory;
 mod negotiate;
@@ -100,6 +102,8 @@ pub fn run(inv: &Invocation) -> Native {
         ["implement"] => implement::run(&inv.matches),
         ["flow"] => flow::run(None, &inv.matches),
         ["flow", sub] => flow::run(Some(sub), &inv.matches),
+        ["install"] => install::run(&inv.matches),
+        ["docs"] => docs::run(),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
@@ -145,6 +149,8 @@ mod tests {
                         | ["check"]
                         | ["flow"]
                         | ["flow", "list" | "init" | "validate" | "render" | "run"]
+                        | ["install"]
+                        | ["docs"]
                 ),
                 "add a native implementation for {:?}",
                 c.path

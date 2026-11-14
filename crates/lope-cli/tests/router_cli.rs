@@ -104,7 +104,7 @@ fn fr5_delegation_execs_python_with_normalised_argv() {
             &["negotiate", "g", "--domain", "engineering", "--rounds", "3"],
             &["negotiate", "g", "--domain", "engineering", "--max-rounds", "3"],
         ),
-        (&["docs"], &["docs"]),
+        (&["update"], &["update"]),
         (&[], &[]),
         (&["version", "--help"], &["version", "--help"]),
         (&["review", "--consensus", "quorum", "--help"], &["review", "--consensus", "quorum", "--help"]),
@@ -131,14 +131,14 @@ fn fr5_force_flags_and_exec_failure() {
     assert_eq!(o.status.code(), Some(42));
     assert!(stdout(&o).ends_with("ARG=lope\nARG=version\n"), "{}", stdout(&o));
     // FORCE_NATIVE: uncovered invocations exit 2 without running Python.
-    let o = lope(&["docs"], &[("LOPE_PYTHON", py), ("LOPE_FORCE_NATIVE", "1")]);
+    let o = lope(&["update"], &[("LOPE_PYTHON", py), ("LOPE_FORCE_NATIVE", "1")]);
     assert_eq!(o.status.code(), Some(2));
     assert!(o.stdout.is_empty());
     assert!(stderr(&o).contains("not implemented natively yet"), "{}", stderr(&o));
     let o = lope(&["version"], &[("LOPE_FORCE_NATIVE", "yes")]);
     assert_eq!(o.status.code(), Some(0));
     // Missing interpreter: shell convention 127.
-    let o = lope(&["docs"], &[("LOPE_PYTHON", "/nonexistent/python")]);
+    let o = lope(&["update"], &[("LOPE_PYTHON", "/nonexistent/python")]);
     assert_eq!(o.status.code(), Some(127));
     assert!(stderr(&o).starts_with("lope: cannot run Python Lope"), "{}", stderr(&o));
 }
@@ -194,7 +194,7 @@ fn delegated_exit_status_and_signals_are_pythons() {
     let p = dir.path().join("killer");
     fs::write(&p, "#!/bin/sh\nkill -TERM $$\n").unwrap();
     fs::set_permissions(&p, fs::Permissions::from_mode(0o755)).unwrap();
-    let o = lope(&["docs"], &[("LOPE_PYTHON", p.to_str().unwrap())]);
+    let o = lope(&["update"], &[("LOPE_PYTHON", p.to_str().unwrap())]);
     use std::os::unix::process::ExitStatusExt;
     assert_eq!(o.status.signal(), Some(15));
 }

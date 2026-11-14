@@ -150,7 +150,7 @@ mod tests {
         assert!(matches!(r(&["version"], &py), Route::Delegate { reason: DelegateReason::ForcedPython, .. }));
         let native = RouterEnv { force_native: true, ..Default::default() };
         assert!(matches!(r(&["version"], &native), Route::Native { .. }));
-        assert!(matches!(r(&["docs"], &native), Route::Exit { code: 2, .. }));
+        assert!(matches!(r(&["update"], &native), Route::Exit { code: 2, .. }));
         // Python wins when both are set (rollback safety).
         let both = RouterEnv { force_python: true, force_native: true, ..Default::default() };
         assert!(matches!(r(&["docs"], &both), Route::Delegate { .. }));

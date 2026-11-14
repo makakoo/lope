@@ -436,6 +436,16 @@ pub static COVERAGE: &[Coverage] = &[
         ],
         since: "S7",
     },
+    Coverage {
+        path: &["install"],
+        args: &["--host"],
+        since: "S8",
+    },
+    Coverage {
+        path: &["docs"],
+        args: &[],
+        since: "S8",
+    },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {
@@ -490,7 +500,8 @@ mod tests {
         assert!(is_covered(&["review"], &["file", "--brain-log"]));
         assert!(is_covered(&["deliberate"], &["template", "scenario"]));
         assert!(is_covered(&["negotiate"], &["goal"]));
-        assert!(!is_covered(&["install"], &[]));
+        assert!(is_covered(&["install"], &["--host"]));
+        assert!(is_covered(&["docs"], &[]));
         assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
     }
 }
