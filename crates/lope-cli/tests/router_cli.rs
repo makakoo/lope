@@ -153,11 +153,24 @@ fn fr23_oq1_modes_exit_2_before_delegation() {
 #[test]
 fn router_trace() {
     let o = lope(
-        &["negotiate", "g", "--rounds", "3"],
+        &["update"],
         &[("LOPE_PYTHON", "/nonexistent/python"), ("LOPE_ROUTER_TRACE", "1")],
     );
     assert!(
-        stderr(&o).starts_with("lope-router: delegate (NoCoverage) /nonexistent/python -m lope negotiate g --max-rounds 3 [normalised: negotiate-rounds×1]"),
+        stderr(&o).starts_with("lope-router: delegate (NoCoverage) /nonexistent/python -m lope update"),
+        "{}",
+        stderr(&o)
+    );
+    let o = lope(
+        &["negotiate", "g", "--rounds", "3"],
+        &[
+            ("LOPE_PYTHON", "/nonexistent/python"),
+            ("LOPE_FORCE_PYTHON", "1"),
+            ("LOPE_ROUTER_TRACE", "1"),
+        ],
+    );
+    assert!(
+        stderr(&o).starts_with("lope-router: delegate (ForcedPython) /nonexistent/python -m lope negotiate g --max-rounds 3 [normalised: negotiate-rounds×1]"),
         "{}",
         stderr(&o)
     );

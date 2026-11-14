@@ -9,6 +9,7 @@ use lope_core::config::LopeCfg;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
+#[derive(Clone)]
 pub struct Pool {
     pub validators: Vec<Arc<dyn Validator>>,
     pub primary: String,

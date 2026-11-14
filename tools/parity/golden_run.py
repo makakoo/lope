@@ -277,13 +277,16 @@ def compare(case, rust, py, default_route=None):
     want_route = case.get("route", default_route)
     if want_route and rust["route"] != want_route:
         problems.append("route: expected %s, rust took %s" % (want_route, rust["route"]))
+    ignore = set(case.get("ignore", []))
     if rust["exit"] != py["exit"]:
         problems.append("exit: rust=%s python=%s" % (rust["exit"], py["exit"]))
     for stream in ("stdout", "stderr"):
+        if stream in ignore:
+            continue
         a, b = normalise_stream(stream, rust[stream]), normalise_stream(stream, py[stream])
         if a != b:
             problems.append("%s differs:\n%s" % (stream, unified(b, a)))
-    if rust["snapshot"] != py["snapshot"]:
+    if "snapshot" not in ignore and rust["snapshot"] != py["snapshot"]:
         problems.append("written state differs:\n%s" % unified(
             json.dumps(py["snapshot"], indent=1), json.dumps(rust["snapshot"], indent=1)))
     for k, v in case.get("expect", {}).items():

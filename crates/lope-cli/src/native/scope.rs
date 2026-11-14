@@ -17,8 +17,13 @@ pub fn os_str(m: &ArgMatches, id: &str) -> Option<String> {
     m.try_get_one::<std::ffi::OsString>(id).ok().flatten().map(|s| s.to_string_lossy().into_owned())
 }
 
-fn u64_of(m: &ArgMatches, id: &str) -> Option<i64> {
-    m.try_get_one::<u64>(id).ok().flatten().map(|v| *v as i64)
+pub fn u64_of(m: &ArgMatches, id: &str) -> Option<i64> {
+    m.try_get_one::<i64>(id)
+        .ok()
+        .flatten()
+        .copied()
+        .or_else(|| m.try_get_one::<u64>(id).ok().flatten().map(|v| *v as i64))
+        .or_else(|| os_str(m, id).and_then(|s| s.parse::<i64>().ok()))
 }
 
 /// CLI overrides exactly as `_ensure_config` extracts them.

@@ -2,12 +2,18 @@
 //! paths listed in lope_compat::coverage reach this module.
 
 mod ask;
+mod audit;
 mod compare;
 mod deliberate;
 mod discover;
+mod execute;
 mod fanout;
+mod flow;
+mod gate;
+mod implement;
 mod jobs;
 mod memory;
+mod negotiate;
 mod review;
 mod scope;
 mod status;
@@ -85,6 +91,15 @@ pub fn run(inv: &Invocation) -> Native {
         ["memory"] => memory::run(None, &inv.matches),
         ["memory", sub] => memory::run(Some(sub), &inv.matches),
         ["deliberate"] => deliberate::run(&inv.matches),
+        ["gate"] => gate::run_gate(None, &inv.matches),
+        ["gate", sub] => gate::run_gate(Some(sub), &inv.matches),
+        ["check"] => gate::run_check(&inv.matches),
+        ["audit"] => audit::run(&inv.matches),
+        ["negotiate"] => negotiate::run(&inv.matches),
+        ["execute"] => execute::run(&inv.matches),
+        ["implement"] => implement::run(&inv.matches),
+        ["flow"] => flow::run(None, &inv.matches),
+        ["flow", sub] => flow::run(Some(sub), &inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
@@ -121,6 +136,15 @@ mod tests {
                         | ["memory"]
                         | ["memory", "stats" | "search" | "file" | "hotspots" | "forget" | "gates"]
                         | ["deliberate"]
+                        | ["negotiate"]
+                        | ["execute"]
+                        | ["implement"]
+                        | ["audit"]
+                        | ["gate"]
+                        | ["gate", "save" | "check"]
+                        | ["check"]
+                        | ["flow"]
+                        | ["flow", "list" | "init" | "validate" | "render" | "run"]
                 ),
                 "add a native implementation for {:?}",
                 c.path

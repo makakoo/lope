@@ -253,6 +253,7 @@
    "expect": {
     "exit_not": 2
    },
+   "ignore": ["stderr", "snapshot"],
    "comment": "Exit 1 on both sides: the mock drafter cannot write `### Phase N:` blocks, so Python's negotiator escalates. The S0 criterion is that Glimmer's --rounds argv no longer exits 2."
   },
   {

@@ -19,6 +19,7 @@ lope-providers.workspace = true
 lope-memory.workspace = true
 lope-makakoo.workspace = true
 lope-engine.workspace = true
+lope-flow.workspace = true
 serde_json.workspace = true
 libc.workspace = true
 fancy-regex.workspace = true

@@ -106,9 +106,15 @@ mod tests {
     fn everything_else_delegates_with_normalised_argv() {
         let e = RouterEnv::default();
         match r(&["negotiate", "g", "--rounds", "3"], &e) {
+            Route::Native { args, .. } => {
+                assert_eq!(args, ["negotiate", "g", "--max-rounds", "3"]);
+            }
+            other => panic!("{other:?}"),
+        }
+        match r(&["update"], &e) {
             Route::Delegate { args, reason } => {
                 assert_eq!(reason, DelegateReason::NoCoverage);
-                assert_eq!(args, ["negotiate", "g", "--max-rounds", "3"]);
+                assert_eq!(args, ["update"]);
             }
             other => panic!("{other:?}"),
         }

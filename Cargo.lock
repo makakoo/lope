@@ -252,6 +252,7 @@ dependencies = [
  "lope-compat",
  "lope-core",
  "lope-engine",
+ "lope-flow",
  "lope-makakoo",
  "lope-memory",
  "lope-providers",
@@ -288,6 +289,7 @@ name = "lope-engine"
 version = "2.0.0"
 dependencies = [
  "fancy-regex",
+ "libc",
  "lope-core",
  "lope-makakoo",
  "lope-memory",
@@ -304,7 +306,14 @@ dependencies = [
 name = "lope-flow"
 version = "2.0.0"
 dependencies = [
+ "lope-core",
  "lope-engine",
+ "lope-providers",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]

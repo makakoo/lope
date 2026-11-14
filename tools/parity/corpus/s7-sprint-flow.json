@@ -1,0 +1,35 @@
+{
+ "comment": "S7 sprint, gate, audit, implement, and flow parity corpus (A11 G7/G8, A15, A16).",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "flow-list",
+   "argv": ["flow", "list"]
+  },
+  {
+   "name": "flow-init-judge-loop",
+   "argv": ["flow", "init", "judge-loop", "--out", "jl.dot"]
+  },
+  {
+   "name": "flow-validate-consensus",
+   "argv": ["flow", "validate", "c.dot"],
+   "files": {
+    "c.dot": "digraph c {\n  Start [type=\"start\"]\n  A [type=\"script\", cmd=\"echo ok\"]\n  Exit [type=\"exit\"]\n  Start -> A -> Exit\n}\n"
+   }
+  },
+  {
+   "name": "flow-validate-unbounded-loop-err",
+   "argv": ["flow", "validate", "bad.dot"],
+   "files": {
+    "bad.dot": "digraph bad {\n  Start [type=\"start\"]\n  A [type=\"script\", cmd=\"echo ok\"]\n  Exit [type=\"exit\"]\n  Start -> A\n  A -> A\n  A -> Exit [condition=\"outcome=never\"]\n}\n"
+   }
+  },
+  {
+   "name": "flow-render-dot",
+   "argv": ["flow", "render", "c.dot", "-T", "dot"],
+   "files": {
+    "c.dot": "digraph c {\n  Start [type=\"start\"]\n  A [type=\"script\", cmd=\"echo ok\"]\n  Exit [type=\"exit\"]\n  Start -> A -> Exit\n}\n"
+   }
+  }
+ ]
+}
