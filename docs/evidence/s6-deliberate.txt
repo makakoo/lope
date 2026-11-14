@@ -1,0 +1,18 @@
+# S6 evidence — Council deliberation (`deliberate`, FR31, A14)
+generated 2026-11-14T16:06:00+01:00
+
+## Scope completed in S6
+- `crates/lope-engine/src/deliberate.rs`:
+  - All 6 built-in templates (`adr`, `prd`, `rfc`, `build-vs-buy`, `migration-plan`, `incident-review`) with exact section headings, rubrics, and stage prompt builders.
+  - 7-stage protocol (`intake`, `position`, `critique`, `revision`, `synthesis`, `rubric`, `minority_report`), with `--depth quick` skipping `critique` and `revision`.
+  - Quorum `expected / 2 + 1` (`DeliberationError::Inconclusive`), anonymization labels `Response A…AA`, byte limits (`48 KB` scenario, `32 KB` turn, `64 KB` peer block), bounded worker pool (`DEFAULT_STAGE_WORKERS = 5`).
+  - Output directory layout (`--out DIR` or `<LOPE_RUN_OUTPUT_DIR or ./lope-runs>/<YYYYMMDD-HHMMSS>-<template>/`): `scenario.md`, `turns/01-positions/`, `turns/02-critiques/`, `turns/03-revisions/`, `final/report.md`, `final/minority-report.md`, `final/decision-log.md`, `trace.jsonl`.
+- `crates/lope-cli/src/native/deliberate.rs` & `crates/lope-compat/src/coverage.rs`:
+  - Native `lope deliberate` wired with stdin `-`, `--depth`, `--out`, `--no-anonymize`, `--minority-report`, `--human-questions`, `--json`, pool flags, and `--brain-context`/`--brain-budget`/`--brain-log`.
+  - Added `deliberate` to `COVERAGE` in `crates/lope-compat/src/coverage.rs`.
+
+## Acceptance gate A14 (`cargo test -p lope-engine -p lope-compat` & `s6_deliberate_parity`)
+- `lope-compat` unit tests: 22/22 passed.
+- `lope-engine` unit tests (`deliberate::tests::*`): 5/5 passed.
+- `lope-engine` integration tests (`tests/s4_engine.rs`): 4/4 passed.
+- Golden parity corpus (`tools/parity/corpus/s6-deliberate.json`, `crates/lope-cli/tests/s6_deliberate_parity.rs`): 11/11 cases identical vs Python Lope (`delib-adr-quick`, `delib-adr-standard`, `delib-adr-deep`, `delib-prd-quick`, `delib-prd-standard`, `delib-prd-deep`, `delib-no-anonymize`, `delib-stdin-json`, `delib-quorum-failure`, `delib-missing-file`, `delib-empty-file`).

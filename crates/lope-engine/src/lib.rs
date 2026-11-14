@@ -2,6 +2,7 @@
 //! minimality, caveman, and verdict repair/events (Sprint S4).
 
 pub mod caveman;
+pub mod deliberate;
 pub mod divide;
 pub mod findings;
 pub mod minimality;

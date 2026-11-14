@@ -3,6 +3,7 @@
 
 mod ask;
 mod compare;
+mod deliberate;
 mod discover;
 mod fanout;
 mod jobs;
@@ -83,6 +84,7 @@ pub fn run(inv: &Invocation) -> Native {
         ["configure"] => discover::run_configure(),
         ["memory"] => memory::run(None, &inv.matches),
         ["memory", sub] => memory::run(Some(sub), &inv.matches),
+        ["deliberate"] => deliberate::run(&inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
@@ -118,6 +120,7 @@ mod tests {
                         | ["configure"]
                         | ["memory"]
                         | ["memory", "stats" | "search" | "file" | "hotspots" | "forget" | "gates"]
+                        | ["deliberate"]
                 ),
                 "add a native implementation for {:?}",
                 c.path

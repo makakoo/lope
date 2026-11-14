@@ -1,0 +1,208 @@
+{
+ "comment": "S6 deliberate corpus (A14): adr/prd at quick/standard/deep, no-anonymize, stdin, json, quorum failure.",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "delib-adr-quick",
+   "argv": [
+    "deliberate",
+    "adr",
+    "scenario.md",
+    "--depth",
+    "quick",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Should we adopt JWT for internal service-to-service auth?\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b",
+    "mock-c"
+   ]
+  },
+  {
+   "name": "delib-adr-standard",
+   "argv": [
+    "deliberate",
+    "adr",
+    "scenario.md",
+    "--depth",
+    "standard",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Should we adopt JWT for internal service-to-service auth?\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b",
+    "mock-c"
+   ]
+  },
+  {
+   "name": "delib-adr-deep",
+   "argv": [
+    "deliberate",
+    "adr",
+    "scenario.md",
+    "--depth",
+    "deep",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Should we adopt JWT for internal service-to-service auth?\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b",
+    "mock-c"
+   ]
+  },
+  {
+   "name": "delib-prd-quick",
+   "argv": [
+    "deliberate",
+    "prd",
+    "scenario.md",
+    "--depth",
+    "quick",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Build a CLI dashboard for job telemetry.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "delib-prd-standard",
+   "argv": [
+    "deliberate",
+    "prd",
+    "scenario.md",
+    "--depth",
+    "standard",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Build a CLI dashboard for job telemetry.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "delib-prd-deep",
+   "argv": [
+    "deliberate",
+    "prd",
+    "scenario.md",
+    "--depth",
+    "deep",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Build a CLI dashboard for job telemetry.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "delib-no-anonymize",
+   "argv": [
+    "deliberate",
+    "rfc",
+    "scenario.md",
+    "--no-anonymize",
+    "--minority-report",
+    "--human-questions",
+    "blocking",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Introduce a binary wire protocol for IPC.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "delib-stdin-json",
+   "argv": [
+    "deliberate",
+    "build-vs-buy",
+    "-",
+    "--depth",
+    "quick",
+    "--json",
+    "--out",
+    "out"
+   ],
+   "stdin": "Should we build or buy a vector search engine?\n",
+   "validators": [
+    "mock-a",
+    "mock-b"
+   ]
+  },
+  {
+   "name": "delib-quorum-failure",
+   "argv": [
+    "deliberate",
+    "adr",
+    "scenario.md",
+    "--out",
+    "out"
+   ],
+   "files": {
+    "scenario.md": "Decision with failing quorum.\n"
+   },
+   "validators": [
+    "mock-a",
+    "mock-fail",
+    "mock-fail"
+   ],
+   "expect": {
+    "exit": 1
+   }
+  },
+  {
+   "name": "delib-missing-file",
+   "argv": [
+    "deliberate",
+    "adr",
+    "does-not-exist.md"
+   ],
+   "expect": {
+    "exit": 1
+   }
+  },
+  {
+   "name": "delib-empty-file",
+   "argv": [
+    "deliberate",
+    "adr",
+    "empty.md"
+   ],
+   "files": {
+    "empty.md": "   \n"
+   },
+   "expect": {
+    "exit": 2
+   }
+  }
+ ]
+}

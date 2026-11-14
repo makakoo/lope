@@ -218,6 +218,34 @@ pub static COVERAGE: &[Coverage] = &[
         args: &["--limit", "--json"],
         since: "S4",
     },
+    Coverage {
+        path: &["deliberate"],
+        args: &[
+            "template",
+            "scenario",
+            "--depth",
+            "--out",
+            "--no-anonymize",
+            "--minority-report",
+            "--human-questions",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S6",
+    },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {
@@ -270,7 +298,8 @@ mod tests {
         assert!(!is_covered(&["version"], &["--help"]));
         assert!(is_covered(&["review"], &["file", "--consensus"]));
         assert!(is_covered(&["review"], &["file", "--brain-log"]));
-        assert!(!is_covered(&["deliberate"], &["template", "scenario"]));
+        assert!(is_covered(&["deliberate"], &["template", "scenario"]));
+        assert!(!is_covered(&["negotiate"], &["goal"]));
         assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
     }
 }
