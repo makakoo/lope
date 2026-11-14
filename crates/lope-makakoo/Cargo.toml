@@ -9,3 +9,8 @@ publish.workspace = true
 [dependencies]
 lope-core.workspace = true
 lope-runtime.workspace = true
+libc.workspace = true
+regex.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

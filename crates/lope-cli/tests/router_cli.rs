@@ -101,17 +101,13 @@ fn fr5_delegation_execs_python_with_normalised_argv() {
     let env = [("LOPE_PYTHON", py.to_str().unwrap()), ("LOPE_HOME", home.to_str().unwrap())];
     let cases: &[(&[&str], &[&str])] = &[
         (
-            &["review", "notes.md", "--consensus", "quorum", "--format", "markdown", "--brain-log"],
-            &["review", "notes.md", "--consensus", "--format", "markdown", "--brain-log"],
-        ),
-        (
             &["negotiate", "g", "--domain", "engineering", "--rounds", "3"],
             &["negotiate", "g", "--domain", "engineering", "--max-rounds", "3"],
         ),
         (&["docs"], &["docs"]),
         (&[], &[]),
         (&["version", "--help"], &["version", "--help"]),
-        (&["review", "--consensus", "quorum", "--brain-log"], &["review", "--consensus", "quorum", "--brain-log"]),
+        (&["review", "--consensus", "quorum", "--help"], &["review", "--consensus", "quorum", "--help"]),
         (&["ask", "a b\tc", "", "--", "-x"], &["ask", "a b\tc", "", "--", "-x"]),
     ];
     for (input, expected) in cases {
@@ -157,16 +153,16 @@ fn fr23_oq1_modes_exit_2_before_delegation() {
 #[test]
 fn router_trace() {
     let o = lope(
-        &["review", "n.md", "--consensus", "quorum", "--brain-log"],
+        &["negotiate", "g", "--rounds", "3"],
         &[("LOPE_PYTHON", "/nonexistent/python"), ("LOPE_ROUTER_TRACE", "1")],
     );
     assert!(
-        stderr(&o).starts_with("lope-router: delegate (NoCoverage) /nonexistent/python -m lope review n.md --consensus --brain-log [normalised: consensus-quorum×1]"),
+        stderr(&o).starts_with("lope-router: delegate (NoCoverage) /nonexistent/python -m lope negotiate g --max-rounds 3 [normalised: negotiate-rounds×1]"),
         "{}",
         stderr(&o)
     );
     let o = lope(
-        &["review", "n.md", "--consensus", "quorum"],
+        &["review", "n.md", "--consensus", "quorum", "--brain-log"],
         &[("LOPE_ROUTER_TRACE", "1")],
     );
     assert!(

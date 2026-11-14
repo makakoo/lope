@@ -252,6 +252,7 @@ dependencies = [
  "lope-compat",
  "lope-core",
  "lope-engine",
+ "lope-makakoo",
  "lope-memory",
  "lope-providers",
  "lope-runtime",
@@ -310,8 +311,11 @@ dependencies = [
 name = "lope-makakoo"
 version = "2.0.0"
 dependencies = [
+ "libc",
  "lope-core",
  "lope-runtime",
+ "regex",
+ "tempfile",
 ]
 
 [[package]]

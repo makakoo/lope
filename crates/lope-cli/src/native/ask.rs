@@ -5,7 +5,15 @@ use super::scope::{self, flag, os_str};
 use super::{Native, Out};
 use clap::ArgMatches;
 use lope_engine::synthesis::format_synthesis;
+use lope_makakoo::{cli_apply_brain_context, cli_emit_brain_log};
 use lope_providers::request_plan::{plan_direct, Limits};
+
+fn brain_budget(m: &ArgMatches) -> Option<usize> {
+    m.try_get_one::<i64>("--brain-budget")
+        .ok()
+        .flatten()
+        .map(|n| (*n).max(1) as usize)
+}
 
 pub fn run(m: &ArgMatches) -> Native {
     let question = os_str(m, "question").unwrap_or_default();
@@ -13,7 +21,16 @@ pub fn run(m: &ArgMatches) -> Native {
     if let Some(c) = os_str(m, "--context").filter(|c| !c.is_empty()) {
         prompt = format!("{c}\n\n{prompt}");
     }
-    simple_fanout(m, "ask", prompt, None)
+    let bc = os_str(m, "--brain-context").filter(|s| !s.is_empty());
+    prompt = match cli_apply_brain_context(bc.as_deref(), brain_budget(m), &prompt) {
+        Ok(p) => p,
+        Err(code) => return Native::Exit(code),
+    };
+    let journal_text = format!(
+        "[[Lope]] ask: {} [[Makakoo OS]]",
+        lope_providers::pyre::head(&question, 120)
+    );
+    simple_fanout(m, "ask", prompt, None, &journal_text)
 }
 
 /// `lope pipe` (`cli.py:_cmd_pipe`).
@@ -24,14 +41,24 @@ pub fn run_pipe(m: &ArgMatches) -> Native {
     }
     let mut buf = Vec::new();
     let _ = std::io::Read::read_to_end(&mut std::io::stdin(), &mut buf);
-    let prompt = String::from_utf8_lossy(&buf).into_owned();
-    if prompt.trim().is_empty() {
+    let raw_prompt = String::from_utf8_lossy(&buf).into_owned();
+    if raw_prompt.trim().is_empty() {
         eprintln!("lope pipe: stdin was empty");
         return Native::Exit(2);
     }
+    let first_line = raw_prompt.trim().lines().next().unwrap_or("");
+    let journal_text = format!(
+        "[[Lope]] pipe answer (stdin → fan-out): {}. [[Makakoo OS]]",
+        lope_providers::pyre::head(first_line, 120)
+    );
+    let bc = os_str(m, "--brain-context").filter(|s| !s.is_empty());
+    let prompt = match cli_apply_brain_context(bc.as_deref(), brain_budget(m), &raw_prompt) {
+        Ok(p) => p,
+        Err(code) => return Native::Exit(code),
+    };
     // stdin is consumed: any hand-back replays it to Python.
     let require_all = flag(m, "--require-all");
-    simple_fanout(m, "pipe", prompt, Some(require_all)).with_stdin(buf)
+    simple_fanout(m, "pipe", prompt, Some(require_all), &journal_text).with_stdin(buf)
 }
 
 pub struct Prepared {
@@ -110,7 +137,13 @@ pub fn prepare(m: &ArgMatches, mode: &str, prompt: &str) -> Result<Prepared, Nat
 }
 
 /// Shared body of ask / pipe (DIRECT plans).
-fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option<bool>) -> Native {
+fn simple_fanout(
+    m: &ArgMatches,
+    mode: &str,
+    prompt: String,
+    require_all: Option<bool>,
+    journal_text: &str,
+) -> Native {
     let Prepared { cfg, pool, scope, json_mode } = match prepare(m, mode, &prompt) {
         Ok(p) => p,
         Err(n) => return n,
@@ -153,6 +186,11 @@ fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option
         fanout::render(&rows, &mut out);
         if let Some(s) = &synth {
             out.line(format_synthesis(s, false));
+        }
+    }
+    if let Some(ack) = cli_emit_brain_log(flag(m, "--brain-log"), journal_text) {
+        if !json_mode {
+            out.line(ack);
         }
     }
     drop(out);

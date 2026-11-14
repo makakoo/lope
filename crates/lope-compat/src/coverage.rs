@@ -22,7 +22,7 @@ pub static COVERAGE: &[Coverage] = &[
     Coverage { path: &["jobs", "reap"], args: &["--dry-run", "--stale", "--json"], since: "S1" },
     Coverage { path: &["jobs", "prune"], args: &["--stale", "--dry-run", "--json"], since: "S1" },
     Coverage { path: &["jobs", "kill"], args: &["run_id", "--json"], since: "S1" },
-    // S4 fan-out + review verbs. --brain-* stays delegated until S5.
+    // S4 + S5 fan-out + review verbs (including --brain-*).
     Coverage {
         path: &["ask"],
         args: &[
@@ -42,6 +42,9 @@ pub static COVERAGE: &[Coverage] = &[
             "--sequential",
             "--synth",
             "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
         ],
         since: "S4",
     },
@@ -63,6 +66,9 @@ pub static COVERAGE: &[Coverage] = &[
             "--sequential",
             "--synth",
             "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
         ],
         since: "S4",
     },
@@ -140,6 +146,9 @@ pub static COVERAGE: &[Coverage] = &[
             "--sequential",
             "--synth",
             "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
         ],
         since: "S4",
     },
@@ -260,7 +269,8 @@ mod tests {
         assert!(is_covered(&["version"], &[]));
         assert!(!is_covered(&["version"], &["--help"]));
         assert!(is_covered(&["review"], &["file", "--consensus"]));
-        assert!(!is_covered(&["review"], &["file", "--brain-log"]));
+        assert!(is_covered(&["review"], &["file", "--brain-log"]));
+        assert!(!is_covered(&["deliberate"], &["template", "scenario"]));
         assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
     }
 }

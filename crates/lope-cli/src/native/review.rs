@@ -21,6 +21,10 @@ use lope_engine::synthesis::{
     build_synthesis_prompt, format_synthesis, DEFAULT_SOURCE_BYTE_LIMIT,
     DEFAULT_TOTAL_PROMPT_BYTE_LIMIT,
 };
+use lope_makakoo::{
+    cli_apply_brain_context, cli_brain_context_block, cli_emit_brain_log,
+    format_review_journal_line, TopFindingSummary,
+};
 use lope_memory::{open_memory, ConsensusFindingInput, FindingRecord};
 use lope_providers::budget::Context;
 use lope_providers::errors::ProviderError;
@@ -90,9 +94,19 @@ pub fn run(m: &ArgMatches) -> Native {
     } else {
         focus_arg.trim().to_string()
     };
-    let prompt = format!(
+    let base_prompt = format!(
         "{REVIEW_SCOPE}\n\n{focus}\n\nFile: {file_path}\n```\n{content}\n```\n\nReturn your review as plain prose. No VERDICT block needed."
     );
+    let bc = os_str(m, "--brain-context").filter(|s| !s.is_empty());
+    let brain_budget = m
+        .try_get_one::<i64>("--brain-budget")
+        .ok()
+        .flatten()
+        .map(|n| (*n).max(1) as usize);
+    let prompt = match cli_apply_brain_context(bc.as_deref(), brain_budget, &base_prompt) {
+        Ok(p) => p,
+        Err(code) => return Native::Exit(code),
+    };
 
     let (cfg, pool) = match scope::resolve(m) {
         Ok(x) => x,
@@ -203,6 +217,15 @@ pub fn run(m: &ArgMatches) -> Native {
                 out.line(format_synthesis(s, false));
             }
         }
+        let j_text = format!(
+            "[[Lope]] bounded review of `{file_path}` — focus: {}. [[Makakoo OS]]",
+            lope_providers::pyre::head(&focus, 80)
+        );
+        if let Some(ack) = cli_emit_brain_log(flag(m, "--brain-log"), &j_text) {
+            if !json_mode {
+                out.line(ack);
+            }
+        }
         out.flush();
         if !quorum_ok {
             if !json_mode {
@@ -245,6 +268,15 @@ pub fn run(m: &ArgMatches) -> Native {
         fanout::render(&rows, &mut out);
         if let Some(s) = &synth {
             out.line(format_synthesis(s, false));
+        }
+    }
+    let j_text = format!(
+        "[[Lope]] review of `{file_path}` — focus: {}. [[Makakoo OS]]",
+        lope_providers::pyre::head(&focus, 80)
+    );
+    if let Some(ack) = cli_emit_brain_log(flag(m, "--brain-log"), &j_text) {
+        if !json_mode {
+            out.line(ack);
         }
     }
     out.flush();
@@ -329,6 +361,21 @@ fn run_consensus(
         out.flush();
     }
 
+    let bc = os_str(m, "--brain-context").filter(|s| !s.is_empty());
+    let brain_budget = m
+        .try_get_one::<i64>("--brain-budget")
+        .ok()
+        .flatten()
+        .map(|n| (*n).max(1) as usize);
+    let brain_context_block = match cli_brain_context_block(bc.as_deref(), brain_budget) {
+        Ok(b) => b,
+        Err(code) => {
+            drop(out);
+            return Native::Exit(scope::finish(scope, code));
+        }
+    };
+    let bcb_ref = brain_context_block.as_deref();
+
     let request_plan = if divide_mode.is_none() {
         match plan_external_request(
             m,
@@ -359,6 +406,7 @@ fn run_consensus(
             &cfg,
             &scope.ctx,
             focus_arg,
+            bcb_ref,
             &mut out,
         ) {
             Ok(r) => r,
@@ -377,6 +425,7 @@ fn run_consensus(
             &cfg,
             &scope.ctx,
             focus_arg,
+            bcb_ref,
         ) {
             Ok(r) => r,
             Err(code) => {
@@ -394,6 +443,7 @@ fn run_consensus(
             &cfg,
             &scope.ctx,
             focus_arg,
+            bcb_ref,
             roles,
         ) {
             Ok(r) => r,
@@ -414,7 +464,7 @@ fn run_consensus(
                 &cfg,
                 &scope.ctx,
                 focus_arg,
-                None,
+                bcb_ref,
             )
         } else {
             run_single_consensus_review(
@@ -426,7 +476,7 @@ fn run_consensus(
                 &cfg,
                 &scope.ctx,
                 focus_arg,
-                None,
+                bcb_ref,
                 None,
             )
         }
@@ -440,7 +490,7 @@ fn run_consensus(
             &cfg,
             &scope.ctx,
             focus_arg,
-            None,
+            bcb_ref,
             None,
         )
     };
@@ -566,6 +616,9 @@ fn run_consensus(
 
     let mut rendered = render_report(&report, fmt, include_raw).unwrap_or_default();
 
+    let brain_log_text = build_review_brain_journal_text_local(file_path, &report, memory_summary.as_ref());
+    let brain_ack = cli_emit_brain_log(flag(m, "--brain-log"), &brain_log_text);
+
     if fmt == "sarif" {
         if let Ok(mut sarif_payload) = serde_json::from_str::<Value>(&rendered) {
             let runtime_payload = scope.ctx.budget.snapshot();
@@ -591,6 +644,9 @@ fn run_consensus(
         }
         if let Some(msg) = &memory_message {
             eprintln!("{msg}");
+        }
+        if let Some(ack) = &brain_ack {
+            eprintln!("{ack}");
         }
         if !quorum_ok {
             eprintln!("{quorum_reason}");
@@ -630,6 +686,9 @@ fn run_consensus(
             } else if let Some(msg) = &memory_message {
                 pm.insert("memory".into(), json!({ "disabled": true, "note": msg }));
             }
+            if let Some(ack) = &brain_ack {
+                pm.insert("brain".into(), json!({ "note": ack }));
+            }
             if !quorum_ok {
                 pm.insert("schema_version".into(), json!(1));
                 pm.insert("partial".into(), json!(true));
@@ -666,6 +725,9 @@ fn run_consensus(
     }
     if let Some(msg) = &memory_message {
         out.line(msg);
+    }
+    if let Some(ack) = &brain_ack {
+        out.line(ack);
     }
     out.flush();
     if !quorum_ok {
@@ -930,6 +992,7 @@ fn build_report_via_divided_files(
     cfg: &LopeCfg,
     ctx: &Context,
     focus: &str,
+    brain_context_block: Option<&str>,
     out: &mut Out,
 ) -> Result<ReviewReport, i32> {
     let (chunks, skipped) = match split_files(Path::new(target_path), DEFAULT_MAX_CHARS, DEFAULT_MAX_FILE_BYTES) {
@@ -986,7 +1049,7 @@ fn build_report_via_divided_files(
         cfg,
         ctx,
         focus,
-        None,
+        brain_context_block,
     ))
 }
 
@@ -1000,6 +1063,7 @@ fn build_report_via_divided_hunks(
     cfg: &LopeCfg,
     ctx: &Context,
     focus: &str,
+    brain_context_block: Option<&str>,
 ) -> Result<ReviewReport, i32> {
     let hunks = split_diff_hunks(content);
     if hunks.is_empty() {
@@ -1038,7 +1102,7 @@ fn build_report_via_divided_hunks(
         cfg,
         ctx,
         focus,
-        None,
+        brain_context_block,
     ))
 }
 
@@ -1052,6 +1116,7 @@ fn build_report_via_roles(
     cfg: &LopeCfg,
     ctx: &Context,
     focus: &str,
+    brain_context_block: Option<&str>,
     roles_spec: &str,
 ) -> Result<ReviewReport, i32> {
     let roles = match parse_roles(roles_spec) {
@@ -1079,7 +1144,7 @@ fn build_report_via_roles(
             focus: focus.to_string(),
             source_label: Some(target_path.to_string()),
         },
-        None,
+        brain_context_block,
     );
     let similarity = m
         .try_get_one::<f64>("--similarity")
@@ -1182,6 +1247,47 @@ fn build_report_via_roles(
         merged_count,
         fallback,
     })
+}
+
+fn build_review_brain_journal_text_local(
+    file_path: &str,
+    report: &ReviewReport,
+    memory_summary: Option<&Value>,
+) -> String {
+    let confirmed_count = report
+        .scored
+        .iter()
+        .filter(|f| f.consensus_level.as_str() == "confirmed")
+        .count();
+    let top_finding = report.scored.first().map(|head| TopFindingSummary {
+        file: head.file.clone().unwrap_or_default(),
+        line: head.line.map(|x| x as i64),
+        agreement: format!("{}/{} validators", head.agreement_count, head.total_validators),
+        score: Some(head.consensus_score),
+        message: head.message.clone(),
+    });
+    let memory_hash = memory_summary
+        .and_then(|ms| {
+            ms.get("recurring_hashes")
+                .and_then(Value::as_array)
+                .and_then(|arr| arr.first())
+                .and_then(Value::as_str)
+                .map(String::from)
+        })
+        .or_else(|| {
+            if memory_summary.is_some() {
+                report.scored.first().map(|f| f.hash().to_string())
+            } else {
+                None
+            }
+        });
+    format_review_journal_line(
+        file_path,
+        report.merged_count,
+        confirmed_count,
+        top_finding.as_ref(),
+        memory_hash.as_deref(),
+    )
 }
 
 fn write_chunk_evidence(ctx: &Context, mode: &str, rows: &[Value]) -> Option<String> {
