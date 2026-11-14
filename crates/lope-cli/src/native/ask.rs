@@ -1,9 +1,10 @@
-//! `lope ask` (`cli.py:_cmd_ask`), DIRECT plans without --synth/brain flags.
+//! `lope ask` (`cli.py:_cmd_ask`) and `lope pipe` (`cli.py:_cmd_pipe`).
 
 use super::fanout;
 use super::scope::{self, flag, os_str};
 use super::{Native, Out};
 use clap::ArgMatches;
+use lope_engine::synthesis::format_synthesis;
 use lope_providers::request_plan::{plan_direct, Limits};
 
 pub fn run(m: &ArgMatches) -> Native {
@@ -50,7 +51,17 @@ pub fn prepare(m: &ArgMatches, mode: &str, prompt: &str) -> Result<Prepared, Nat
         max_input_bytes: lope_core::config::LopeCfg::int_field(&cfg.max_input_bytes),
     };
     let timeout = cfg.timeout_secs() as f64;
-    let plan = plan_direct(prompt, mode, &pool.validators, &cfg.request_policy, &lim, timeout, pool.parallel, 0);
+    let extra_calls = usize::from(flag(m, "--synth"));
+    let plan = plan_direct(
+        prompt,
+        mode,
+        &pool.validators,
+        &cfg.request_policy,
+        &lim,
+        timeout,
+        pool.parallel,
+        extra_calls,
+    );
     if !plan.direct {
         return Err(Native::Delegate("request plan is not direct".into()));
     }
@@ -63,8 +74,16 @@ pub fn prepare(m: &ArgMatches, mode: &str, prompt: &str) -> Result<Prepared, Nat
     let tv: Vec<(String, Option<i64>)> =
         pool.validators.iter().map(|v| (v.name().to_string(), v.timeout_override())).collect();
     let advice = lope_providers::latency::fit_warnings(&tv, Some(cfg.timeout_secs()));
+    let mut exec_profiles = Vec::new();
+    if mode == "review" {
+        for v in &pool.validators {
+            if let Some(ep) = v.execution_profile(mode) {
+                exec_profiles.push(ep);
+            }
+        }
+    }
     plan_json["budget_advice"] = serde_json::json!(advice);
-    plan_json["execution_profiles"] = serde_json::json!([]);
+    plan_json["execution_profiles"] = serde_json::json!(exec_profiles);
     scope.ctx.add_request_plan(plan_json);
     if !json_mode {
         eprintln!(
@@ -78,10 +97,19 @@ pub fn prepare(m: &ArgMatches, mode: &str, prompt: &str) -> Result<Prepared, Nat
     for l in &advice {
         eprintln!("{l}");
     }
+    for ep in &exec_profiles {
+        if let Some(ws) = ep.get("warnings").and_then(serde_json::Value::as_array) {
+            for w in ws {
+                if let Some(s) = w.as_str() {
+                    eprintln!("{s}");
+                }
+            }
+        }
+    }
     Ok(Prepared { cfg, pool, scope, json_mode })
 }
 
-/// Shared body of ask / pipe (DIRECT plans, no --synth/brain flags).
+/// Shared body of ask / pipe (DIRECT plans).
 fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option<bool>) -> Native {
     let Prepared { cfg, pool, scope, json_mode } = match prepare(m, mode, &prompt) {
         Ok(p) => p,
@@ -109,12 +137,23 @@ fn simple_fanout(m: &ArgMatches, mode: &str, prompt: String, require_all: Option
     if !ok {
         scope.ctx.budget.mark_partial(&reason);
     }
+    let synth = if ok {
+        fanout::maybe_synthesize(m, &cfg, &pool, &scope.ctx, &rows, &prompt, None, false)
+    } else {
+        None
+    };
     if json_mode {
         let mut payload = scope.ctx.budget.snapshot();
         payload["responses"] = fanout::payload("answer", &rows);
+        if let Some(s) = &synth {
+            payload["synthesis"] = fanout::synth_json_value(s);
+        }
         out.line(lope_core::output::json_text(&payload));
     } else {
         fanout::render(&rows, &mut out);
+        if let Some(s) = &synth {
+            out.line(format_synthesis(s, false));
+        }
     }
     drop(out);
     let mut code = 0;

@@ -7,6 +7,7 @@ mod discover;
 mod fanout;
 mod jobs;
 mod memory;
+mod review;
 mod scope;
 mod status;
 mod team;
@@ -76,6 +77,7 @@ pub fn run(inv: &Invocation) -> Native {
         ["pipe"] => ask::run_pipe(&inv.matches),
         ["vote"] => vote::run(&inv.matches),
         ["compare"] => compare::run(&inv.matches),
+        ["review"] => review::run(&inv.matches),
         ["team"] => team::run(None, &inv.matches),
         ["team", sub] => team::run(Some(sub), &inv.matches),
         ["configure"] => discover::run_configure(),
@@ -110,6 +112,7 @@ mod tests {
                         | ["pipe"]
                         | ["vote"]
                         | ["compare"]
+                        | ["review"]
                         | ["team"]
                         | ["team", "list" | "remove" | "enable" | "disable" | "add" | "test" | "health"]
                         | ["configure"]

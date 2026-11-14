@@ -1,0 +1,117 @@
+# S4 evidence — Single-shot verbs (`ask`, `vote`, `compare`, `pipe`), `lope review`, `lope memory`, and `lope-engine`
+generated 2026-11-14T13:42:30+01:00
+
+## Scope completed in S4
+- `crates/lope-memory`:
+  - Full SQLite store linking system `-lsqlite3` (`PRAGMA journal_mode = WAL`, `PRAGMA synchronous = NORMAL`, `sqlite3_busy_timeout(5000)`, 5s retry loop on `"locked"`, `PRAGMA user_version = 1`, all 5 tables: `findings`, `runs`, `gate_verdicts`, `verdict_events`, `provider_latency`).
+  - Bidirectional Python ↔ Rust compatibility and 4-writer concurrent WAL stress test (`A12`).
+- `crates/lope-engine`:
+  - `findings.rs`: `parse_findings`, `merge_findings`, `score_consensus`, `format_consensus_markdown`, `format_consensus_json`.
+  - `sarif.rs`: SARIF 2.1.0 emitter (`build_sarif`, `format_sarif`).
+  - `minimality.rs`: `mode`, `implementation_directive`, `validator_rubric`, `resolve_review_focus`.
+  - `caveman.rs`: `get_directive` (`LOPE_CAVEMAN=full|lite|off`).
+  - `synthesis.rs`: `build_synthesis_prompt` (`--anonymous`, byte limits, truncations), `synthesize`, `format_synthesis`.
+  - `divide.rs`: `parse_roles`, `assign_roles`, `build_role_prompt`, `split_files`, `pack_file_chunks`, `split_diff_hunks`, `pack_hunk_chunks`.
+  - `review.rs`: `build_consensus_report`, `render_report` (`text`, `json`, `markdown`, `markdown-pr`, `sarif`), `format_pr_markdown`, `write_output_file_atomic`, `write_chunk_evidence`, `build_review_brain_journal_text`.
+  - `verdict_repair.rs` & `verdict_events.rs`: `parse_verdict_block`, `build_repair_prompt`, `evaluate_repair_reply`, `classify_parse_error`, `record_verdict_event`.
+- `crates/lope-providers`:
+  - `request_plan.rs`: `SemanticUnit`, `RequestChunk`, `semantic_units`, `pack_units`, `plan_request_full`.
+  - `budget.rs`: `RunBudget::add_artifact`.
+- `crates/lope-cli`:
+  - Native `lope ask`, `lope vote`, `lope compare`, `lope pipe` (including `--synth` and `--anonymous`).
+  - Native `lope review` (raw mode, `--consensus`/`--structured`, all 5 `--format` modes `text|json|markdown|markdown-pr|sarif`, atomic `--output/-o`, `--include-raw`, `--remember`, `--synth`, `--anonymous`, `--focus` with minimality aliases, `--roles`, `--divide files`, `--divide hunks`, chunk evidence writing).
+  - Native `lope memory [stats|search|file|hotspots|gates|forget]`.
+
+## Acceptance gate A12 (`cargo test -p lope-memory`)
+     Running unittests src/lib.rs (target/debug/deps/lope_memory-7dc312062467c8c0)
+test tests::a12_all_five_tables_roundtrip ... ok
+test tests::a12_bidirectional_python_rust_and_four_concurrent_writers ... ok
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.72s
+
+## Engine unit/integration suite (`cargo test -p lope-engine`)
+     Running tests/s4_engine.rs (target/debug/deps/s4_engine-38bdbe1ee5fe1ded)
+test fr26_caveman_and_minimality_and_divide_and_synthesis ... ok
+test a10_findings_parse_merge_and_score_consensus ... ok
+test a10_sarif_validates_2_1_0_schema ... ok
+test fr25_verdict_repair_and_events ... ok
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.08s
+
+## Golden parity — `s4-memory.json` (19/19)
+PASS memory-default-empty               native   exit=0   files=4   rust=0.03s python=1.15s attempt=1
+PASS memory-stats-seeded                native   exit=0   files=4   rust=0.02s python=0.86s attempt=1
+PASS memory-stats-json                  native   exit=0   files=4   rust=0.05s python=0.87s attempt=1
+PASS memory-search-hit                  native   exit=0   files=4   rust=0.02s python=0.85s attempt=1
+PASS memory-search-json                 native   exit=0   files=4   rust=0.05s python=0.85s attempt=1
+PASS memory-search-miss                 native   exit=0   files=4   rust=0.03s python=1.16s attempt=1
+PASS memory-file-hit                    native   exit=0   files=4   rust=0.02s python=0.88s attempt=1
+PASS memory-file-json                   native   exit=0   files=4   rust=0.02s python=0.85s attempt=1
+PASS memory-file-miss                   native   exit=0   files=4   rust=0.03s python=1.11s attempt=1
+PASS memory-hotspots-empty              native   exit=0   files=4   rust=0.03s python=1.10s attempt=1
+PASS memory-hotspots-seeded             native   exit=0   files=4   rust=0.02s python=1.39s attempt=1
+PASS memory-hotspots-json               native   exit=0   files=4   rust=0.05s python=0.86s attempt=1
+PASS memory-gates-empty                 native   exit=0   files=4   rust=0.03s python=1.13s attempt=1
+PASS memory-gates-seeded                native   exit=0   files=4   rust=0.02s python=0.91s attempt=1
+PASS memory-gates-json                  native   exit=0   files=4   rust=0.05s python=0.91s attempt=1
+PASS memory-forget-hash                 native   exit=0   files=4   rust=0.02s python=0.91s attempt=1
+PASS memory-forget-file                 native   exit=0   files=4   rust=0.02s python=0.94s attempt=1
+PASS memory-forget-missing-args         native   exit=2   files=4   rust=0.03s python=1.20s attempt=1
+PASS memory-disabled-off                native   exit=1   files=1   rust=0.01s python=1.14s attempt=1
+golden-run: 19/19 cases identical
+
+## Golden parity — `s4-ask.json` (27/27)
+PASS ask-basic                          native   exit=0   files=4   rust=0.96s python=3.34s attempt=1
+PASS ask-json                           native   exit=0   files=4   rust=1.00s python=3.23s attempt=1
+PASS ask-context                        native   exit=0   files=4   rust=1.03s python=3.43s attempt=1
+PASS ask-sequential                     native   exit=0   files=4   rust=1.07s python=3.46s attempt=1
+PASS ask-one-validator                  native   exit=0   files=4   rust=0.85s python=2.61s attempt=1
+PASS ask-long-preview                   native   exit=0   files=4   rust=1.08s python=4.12s attempt=1
+PASS ask-failing-validator              native   exit=1   files=4   rust=1.16s python=3.81s attempt=1
+PASS ask-unknown-validator              native   exit=0   files=4   rust=0.85s python=2.66s attempt=1
+PASS ask-synth-native                   native   exit=0   files=4   rust=1.27s python=5.40s attempt=1
+PASS pipe-basic                         native   exit=0   files=4   rust=1.07s python=3.76s attempt=1
+PASS pipe-json                          native   exit=0   files=4   rust=1.03s python=3.93s attempt=1
+PASS pipe-empty                         native   exit=2   files=1   rust=0.01s python=1.17s attempt=1
+PASS pipe-require-all                   native   exit=1   files=4   rust=1.33s python=4.70s attempt=1
+PASS pipe-synth-native                  native   exit=0   files=4   rust=1.36s python=4.63s attempt=1
+PASS pipe-http-provider-replays-stdin   handback exit=1   files=3   rust=2.71s python=3.30s attempt=1
+PASS vote-basic                         native   exit=1   files=4   rust=1.05s python=3.46s attempt=1
+PASS vote-json                          native   exit=1   files=4   rust=1.04s python=3.41s attempt=1
+PASS vote-says-4                        native   exit=0   files=4   rust=1.13s python=4.20s attempt=1
+PASS vote-says-4-json                   native   exit=0   files=4   rust=1.05s python=3.60s attempt=1
+PASS vote-failing                       native   exit=0   files=4   rust=1.32s python=4.54s attempt=1
+PASS vote-one-option                    native   exit=2   files=1   rust=0.02s python=1.33s attempt=1
+PASS vote-dup-options                   native   exit=2   files=1   rust=0.02s python=1.35s attempt=1
+PASS vote-long-prompt                   native   exit=0   files=4   rust=1.09s python=3.71s attempt=1
+PASS compare-basic                      native   exit=0   files=6   rust=1.18s python=3.65s attempt=1
+PASS compare-criteria-json              native   exit=0   files=6   rust=1.08s python=3.74s attempt=1
+PASS compare-missing-b                  native   exit=1   files=3   rust=0.02s python=1.57s attempt=1
+PASS compare-failing                    native   exit=1   files=6   rust=1.10s python=3.47s attempt=1
+golden-run: 27/27 cases identical
+
+## Golden parity — `s4-review-fanout.json` (21/21, covering A9, A10, A11 G4/G5)
+PASS a9-ask-3validators-1fail-isolated  native   exit=0   files=4   rust=1.28s python=4.01s attempt=1
+PASS a9-ask-synth-anon-json             native   exit=0   files=4   rust=1.18s python=3.64s attempt=1
+PASS a9-pipe-3validators-1fail-isolated native   exit=0   files=4   rust=1.17s python=3.54s attempt=1
+PASS a9-pipe-require-all-fails          native   exit=1   files=4   rust=1.14s python=3.36s attempt=1
+PASS a9-vote-synth-anon                 native   exit=0   files=4   rust=1.10s python=3.25s attempt=1
+PASS a9-compare-synth-anon              native   exit=0   files=6   rust=1.09s python=3.16s attempt=1
+PASS a10-review-raw-text                native   exit=0   files=5   rust=0.85s python=2.77s attempt=1
+PASS a10-review-raw-json-synth          native   exit=0   files=5   rust=1.03s python=3.09s attempt=1
+PASS a10-review-consensus-text          native   exit=0   files=5   rust=0.87s python=2.42s attempt=1
+PASS a10-review-consensus-json          native   exit=0   files=5   rust=0.91s python=2.66s attempt=1
+PASS a10-review-consensus-markdown-output native   exit=0   files=6   rust=0.89s python=2.48s attempt=1
+PASS a10-review-consensus-markdown-pr   native   exit=0   files=5   rust=0.90s python=2.49s attempt=1
+PASS a10-review-consensus-sarif         native   exit=0   files=5   rust=0.89s python=2.47s attempt=1
+PASS a10-review-remember-and-synth      native   exit=0   files=8   rust=1.12s python=3.12s attempt=1
+PASS a10-review-minimality-focus        native   exit=0   files=5   rust=0.88s python=2.43s attempt=1
+PASS a10-review-roles                   native   exit=0   files=5   rust=0.90s python=2.45s attempt=1
+PASS a10-review-divide-files            native   exit=0   files=8   rust=0.91s python=2.48s attempt=1
+PASS a10-review-divide-hunks            native   exit=0   files=6   rust=0.91s python=2.52s attempt=1
+PASS a10-review-divide-and-roles-refused native   exit=2   files=4   rust=15.10s python=0.84s attempt=1
+PASS a11-glimmer-g4-council             native   exit=0   files=5   rust=0.86s python=2.35s attempt=1
+PASS a11-glimmer-g5-headless-review     native   exit=0   files=5   rust=0.86s python=2.40s attempt=1
+golden-run: 21/21 cases identical
+
+## NFR2 — Peak RSS of 5-validator fan-out (`< 30 MB`)
+Measured via `/usr/bin/time -l target/debug/lope ask hello` across 5 active validators:
+PEAK_RSS_BYTES: 16146432 (15.40 MB) — PASS (< 30.00 MB limit).

@@ -1,11 +1,12 @@
 //! `lope vote` (`cli.py:_cmd_vote`, `_parse_vote`, `_choice_quorum`, `_vote_winner`).
 
 use super::ask::{prepare, Prepared};
-use super::fanout::{err_text, fanout_generate};
+use super::fanout::{self, err_text, fanout_generate};
 use super::scope::{self, os_str};
 use super::{Native, Out};
 use clap::ArgMatches;
 use lope_core::pyjson::{dumps, Opts};
+use lope_engine::synthesis::format_synthesis;
 use serde_json::{json, Map, Value};
 
 /// `_parse_vote`: longest option first, whole-token, case-insensitive.
@@ -124,6 +125,13 @@ pub fn run(m: &ArgMatches) -> Native {
     if !ok {
         scope.ctx.budget.mark_partial(&reason);
     }
+    let synth = if ok {
+        let tally_str = tally.iter().map(|(o, n)| format!("{o}={n}")).collect::<Vec<_>>().join(", ");
+        let task = format!("Vote on: {question}\nOptions: {}\nTally: {tally_str}", options.join(", "));
+        fanout::maybe_synthesize(m, &cfg, &pool, &scope.ctx, &rows, &task, None, false)
+    } else {
+        None
+    };
     let win = winner(&tally);
     if json_mode {
         let mut p = Map::new();
@@ -139,6 +147,9 @@ pub fn run(m: &ArgMatches) -> Native {
         );
         p.insert("unparseable".into(), json!(unparseable));
         p.insert("errored".into(), json!(errored));
+        if let Some(s) = &synth {
+            p.insert("synthesis".into(), fanout::synth_json_value(s));
+        }
         p.insert("runtime".into(), scope.ctx.budget.snapshot());
         if !ok {
             p.insert("partial".into(), json!(true));
@@ -171,6 +182,10 @@ pub fn run(m: &ArgMatches) -> Native {
     match &win {
         Some(w) => out.line(format!("Winner: {w}")),
         None => out.line("No winner — tie or no votes. See tally above."),
+    }
+    if let Some(s) = &synth {
+        out.blank();
+        out.line(format_synthesis(s, false));
     }
     drop(out);
     if !ok {

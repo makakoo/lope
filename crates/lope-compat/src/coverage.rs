@@ -22,7 +22,7 @@ pub static COVERAGE: &[Coverage] = &[
     Coverage { path: &["jobs", "reap"], args: &["--dry-run", "--stale", "--json"], since: "S1" },
     Coverage { path: &["jobs", "prune"], args: &["--stale", "--dry-run", "--json"], since: "S1" },
     Coverage { path: &["jobs", "kill"], args: &["run_id", "--json"], since: "S1" },
-    // S4 (first fan-out verb). --synth/--anonymous/--brain-* stay delegated.
+    // S4 fan-out + review verbs. --brain-* stays delegated until S5.
     Coverage {
         path: &["ask"],
         args: &[
@@ -40,6 +40,8 @@ pub static COVERAGE: &[Coverage] = &[
             "--request-policy",
             "--parallel",
             "--sequential",
+            "--synth",
+            "--anonymous",
         ],
         since: "S4",
     },
@@ -59,6 +61,8 @@ pub static COVERAGE: &[Coverage] = &[
             "--request-policy",
             "--parallel",
             "--sequential",
+            "--synth",
+            "--anonymous",
         ],
         since: "S4",
     },
@@ -79,6 +83,8 @@ pub static COVERAGE: &[Coverage] = &[
             "--request-policy",
             "--parallel",
             "--sequential",
+            "--synth",
+            "--anonymous",
         ],
         since: "S4",
     },
@@ -100,6 +106,40 @@ pub static COVERAGE: &[Coverage] = &[
             "--request-policy",
             "--parallel",
             "--sequential",
+            "--synth",
+            "--anonymous",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["review"],
+        args: &[
+            "file",
+            "--focus",
+            "--json",
+            "--consensus",
+            "--structured",
+            "--min-consensus",
+            "--similarity",
+            "--format",
+            "--output",
+            "--include-raw",
+            "--remember",
+            "--divide",
+            "--roles",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
         ],
         since: "S4",
     },
@@ -219,7 +259,8 @@ mod tests {
     fn version_is_native_only_without_arguments() {
         assert!(is_covered(&["version"], &[]));
         assert!(!is_covered(&["version"], &["--help"]));
-        assert!(!is_covered(&["review"], &[]));
+        assert!(is_covered(&["review"], &["file", "--consensus"]));
+        assert!(!is_covered(&["review"], &["file", "--brain-log"]));
         assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
     }
 }

@@ -1,0 +1,394 @@
+{
+ "comment": "S4 review + single-shot fanout corpus (FR21, FR22, FR24, FR26, A9, A10, A11 G4/G5): native `ask`, `pipe`, `vote`, `compare`, and `review` vs Python Lope.",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "a9-ask-3validators-1fail-isolated",
+   "validators": [
+    "mock-a",
+    "mock-fail",
+    "mock-b"
+   ],
+   "argv": [
+    "ask",
+    "What is 2+2?"
+   ],
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a9-ask-synth-anon-json",
+   "argv": [
+    "ask",
+    "What is 2+2?",
+    "--synth",
+    "--anonymous",
+    "--json"
+   ],
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a9-pipe-3validators-1fail-isolated",
+   "validators": [
+    "mock-a",
+    "mock-fail",
+    "mock-b"
+   ],
+   "argv": [
+    "pipe"
+   ],
+   "stdin": "Check this input.",
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a9-pipe-require-all-fails",
+   "validators": [
+    "mock-a",
+    "mock-fail",
+    "mock-b"
+   ],
+   "argv": [
+    "pipe",
+    "--require-all"
+   ],
+   "stdin": "Check this input.",
+   "expect": {
+    "exit": 1
+   }
+  },
+  {
+   "name": "a9-vote-synth-anon",
+   "argv": [
+    "vote",
+    "Pick a number",
+    "--options",
+    "3,4,5",
+    "--synth",
+    "--anonymous"
+   ],
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a9-compare-synth-anon",
+   "argv": [
+    "compare",
+    "a.txt",
+    "b.txt",
+    "--criteria",
+    "clarity",
+    "--synth",
+    "--anonymous"
+   ],
+   "files": {
+    "a.txt": "Alpha version of the document.\n",
+    "b.txt": "Beta version of the document.\n"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-raw-text",
+   "argv": [
+    "review",
+    "app.py"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-raw-json-synth",
+   "argv": [
+    "review",
+    "app.py",
+    "--json",
+    "--synth",
+    "--anonymous"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-consensus-text",
+   "argv": [
+    "review",
+    "app.py",
+    "--consensus"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-consensus-json",
+   "argv": [
+    "review",
+    "app.py",
+    "--consensus",
+    "--format",
+    "json"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-consensus-markdown-output",
+   "argv": [
+    "review",
+    "app.py",
+    "--structured",
+    "--format",
+    "markdown",
+    "-o",
+    "out/report.md"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-consensus-markdown-pr",
+   "argv": [
+    "review",
+    "app.py",
+    "--format",
+    "markdown-pr",
+    "--include-raw"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-consensus-sarif",
+   "argv": [
+    "review",
+    "app.py",
+    "--format",
+    "sarif"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0,
+    "stdout_contains": [
+     "\"version\": \"2.1.0\""
+    ]
+   }
+  },
+  {
+   "name": "a10-review-remember-and-synth",
+   "argv": [
+    "review",
+    "app.py",
+    "--consensus",
+    "--remember",
+    "--synth",
+    "--anonymous"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-minimality-focus",
+   "argv": [
+    "review",
+    "app.py",
+    "--consensus",
+    "--focus",
+    "minimality"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-roles",
+   "argv": [
+    "review",
+    "app.py",
+    "--roles",
+    "security,performance"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-divide-files",
+   "argv": [
+    "review",
+    "pkg",
+    "--divide",
+    "files"
+   ],
+   "files": {
+    "pkg/a.py": "def a():\n    return 1\n",
+    "pkg/b.py": "def b():\n    return 2\n",
+    "pkg/logo.png": "not-really-png"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-divide-hunks",
+   "argv": [
+    "review",
+    "changes.diff",
+    "--divide",
+    "hunks"
+   ],
+   "files": {
+    "changes.diff": "diff --git a/app.py b/app.py\n--- a/app.py\n+++ b/app.py\n@@ -1,2 +1,3 @@\n def add(a, b):\n+    assert a is not None\n     return a + b\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a10-review-divide-and-roles-refused",
+   "argv": [
+    "review",
+    "app.py",
+    "--divide",
+    "hunks",
+    "--roles",
+    "security"
+   ],
+   "files": {
+    "app.py": "def add(a, b):\n    return a + b\n"
+   },
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "a11-glimmer-g4-council",
+   "argv": [
+    "review",
+    "notes.md",
+    "--consensus",
+    "quorum",
+    "--format",
+    "markdown",
+    "--focus",
+    "Focus on tax implications."
+   ],
+   "python_argv": [
+    "review",
+    "notes.md",
+    "--consensus",
+    "--format",
+    "markdown",
+    "--focus",
+    "Focus on tax implications."
+   ],
+   "files": {
+    "notes.md": "# Q4 Notes\n\nCheck cross-border VAT rules.\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  },
+  {
+   "name": "a11-glimmer-g5-headless-review",
+   "argv": [
+    "review",
+    "notes.md",
+    "--consensus",
+    "--format",
+    "markdown",
+    "--focus",
+    "Focus on security."
+   ],
+   "files": {
+    "notes.md": "# Q4 Notes\n\nCheck auth middleware.\n"
+   },
+   "env": {
+    "LOPE_MOCK_MODE": "verdict"
+   },
+   "expect": {
+    "exit": 0
+   }
+  }
+ ]
+}

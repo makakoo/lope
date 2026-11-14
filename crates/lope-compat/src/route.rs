@@ -105,9 +105,15 @@ mod tests {
     #[test]
     fn everything_else_delegates_with_normalised_argv() {
         let e = RouterEnv::default();
-        match r(&["review", "n.md", "--consensus", "quorum"], &e) {
+        match r(&["review", "n.md", "--consensus", "quorum", "--brain-log"], &e) {
             Route::Delegate { args, reason } => {
                 assert_eq!(reason, DelegateReason::NoCoverage);
+                assert_eq!(args, ["review", "n.md", "--consensus", "--brain-log"]);
+            }
+            other => panic!("{other:?}"),
+        }
+        match r(&["review", "n.md", "--consensus", "quorum"], &e) {
+            Route::Native { args, .. } => {
                 assert_eq!(args, ["review", "n.md", "--consensus"]);
             }
             other => panic!("{other:?}"),

@@ -1,9 +1,16 @@
-//! `_fanout_generate`, `_render_fanout`, `_fanout_quorum`.
+//! `_fanout_generate`, `_render_fanout`, `_fanout_quorum`, `_maybe_synthesize`.
 
+use super::scope::flag;
+use clap::ArgMatches;
+use lope_engine::findings::ConsensusFinding;
+use lope_engine::synthesis::{build_synthesis_prompt, format_synthesis, run_synthesis, SynthesisResult};
 use lope_providers::budget::Context;
 use lope_providers::errors::ProviderError;
 use lope_providers::generic::Validator;
 use lope_providers::invocation::invoke_generate;
+use lope_providers::request_plan::{plan_request_full, Limits};
+use serde_json::{json, Value};
+use std::collections::BTreeMap;
 use std::sync::mpsc::{channel, RecvTimeoutError};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -17,7 +24,23 @@ pub fn fanout_generate(
     timeout: f64,
     ctx: &Context,
 ) -> Vec<Row> {
-    let available: Vec<Arc<dyn Validator>> = validators.iter().filter(|v| v.available()).cloned().collect();
+    fanout_generate_with_prompts(validators, parallel, prompt, None, timeout, ctx)
+}
+
+pub fn fanout_generate_with_prompts(
+    validators: &[Arc<dyn Validator>],
+    parallel: bool,
+    prompt: &str,
+    prompts_by_validator: Option<&BTreeMap<String, String>>,
+    timeout: f64,
+    ctx: &Context,
+) -> Vec<Row> {
+    let available: Vec<Arc<dyn Validator>> = validators
+        .iter()
+        .filter(|v| v.available())
+        .filter(|v| prompts_by_validator.is_none_or(|m| m.contains_key(v.name())))
+        .cloned()
+        .collect();
     if available.is_empty() {
         return vec![];
     }
@@ -31,9 +54,13 @@ pub fn fanout_generate(
         while !pending.is_empty() && active.len() < max_workers && Instant::now() < deadline {
             let v = pending.remove(0);
             active.push(v.name().to_string());
-            let (tx, c, p) = (tx.clone(), ctx.clone(), prompt.to_string());
+            let selected_prompt = prompts_by_validator
+                .and_then(|m| m.get(v.name()))
+                .cloned()
+                .unwrap_or_else(|| prompt.to_string());
+            let (tx, c) = (tx.clone(), ctx.clone());
             std::thread::spawn(move || {
-                let r = invoke_generate(v.as_ref(), &p, timeout, Some(&c), Some(&c.stage.clone()));
+                let r = invoke_generate(v.as_ref(), &selected_prompt, timeout, Some(&c), Some(&c.stage.clone()));
                 let _ = tx.send((v.name().to_string(), r));
             });
         }
@@ -94,28 +121,50 @@ pub fn render(rows: &[Row], out: &mut super::Out) {
     out.blank();
 }
 
-pub fn payload(label: &str, rows: &[Row]) -> serde_json::Value {
+pub fn payload(label: &str, rows: &[Row]) -> Value {
     use lope_core::redaction::redact_text;
-    let v: Vec<serde_json::Value> = rows
+    let v: Vec<Value> = rows
         .iter()
         .map(|(name, answer, err)| {
             let mut m = serde_json::Map::new();
             m.insert("validator".into(), name.clone().into());
             m.insert(label.into(), redact_text(answer).into());
-            m.insert("error".into(), err.as_ref().map(|e| serde_json::Value::from(redact_text(&err_text(e)))).unwrap_or(serde_json::Value::Null));
-            if let Some(ProviderError::Unverified { cleanup, stdout_complete, stdout_truncated, returncode, stdout, .. }) = err {
+            m.insert(
+                "error".into(),
+                err.as_ref()
+                    .map(|e| Value::from(redact_text(&err_text(e))))
+                    .unwrap_or(Value::Null),
+            );
+            if let Some(ProviderError::Unverified {
+                cleanup,
+                stdout_complete,
+                stdout_truncated,
+                returncode,
+                stdout,
+                ..
+            }) = err
+            {
                 m.insert(
                     "completion".into(),
-                    serde_json::json!({"status": "UNVERIFIED", "cleanup": cleanup, "stdout_complete": stdout_complete, "stdout_truncated": stdout_truncated, "returncode": returncode}),
+                    json!({
+                        "status": "UNVERIFIED",
+                        "cleanup": cleanup,
+                        "stdout_complete": stdout_complete,
+                        "stdout_truncated": stdout_truncated,
+                        "returncode": returncode
+                    }),
                 );
                 if std::env::var("LOPE_RECOVER_UNVERIFIED_OUTPUT").as_deref() == Ok("1") {
-                    m.insert("unverified_output".into(), redact_text(&lope_providers::diagnostics::redact_diagnostic(stdout)).into());
+                    m.insert(
+                        "unverified_output".into(),
+                        redact_text(&lope_providers::diagnostics::redact_diagnostic(stdout)).into(),
+                    );
                 }
             }
-            serde_json::Value::Object(m)
+            Value::Object(m)
         })
         .collect();
-    serde_json::Value::Array(v)
+    Value::Array(v)
 }
 
 /// `_fanout_quorum`.
@@ -152,4 +201,121 @@ pub fn quorum(rows: &[Row], expected: &[String]) -> (bool, String) {
             format!("inconclusive: substantive-result quorum {usable}/{required} not met from {n} validators")
         },
     )
+}
+
+/// `_maybe_synthesize` + `_execute_bounded_synthesis` (`cli.py:3658-3757`).
+#[allow(clippy::too_many_arguments)]
+pub fn maybe_synthesize(
+    m: &ArgMatches,
+    cfg: &lope_core::config::LopeCfg,
+    pool: &lope_providers::pool::Pool,
+    ctx: &Context,
+    rows: &[Row],
+    task: &str,
+    structured_findings: Option<&[ConsensusFinding]>,
+    include_raw_in_structured: bool,
+) -> Option<SynthesisResult> {
+    if !flag(m, "--synth") {
+        return None;
+    }
+    let primary_rows: Vec<(String, String, Option<String>)> = rows
+        .iter()
+        .map(|(n, a, e)| {
+            let ans = if structured_findings.is_some() && !include_raw_in_structured {
+                String::new()
+            } else {
+                a.clone()
+            };
+            (n.clone(), ans, e.as_ref().map(err_text))
+        })
+        .collect();
+    let mut truncations = Vec::new();
+    let prompt = build_synthesis_prompt(
+        task,
+        &primary_rows,
+        structured_findings,
+        flag(m, "--anonymous"),
+        lope_engine::synthesis::DEFAULT_SOURCE_BYTE_LIMIT,
+        lope_engine::synthesis::DEFAULT_TOTAL_PROMPT_BYTE_LIMIT,
+        &mut truncations,
+    );
+    execute_bounded_synthesis(cfg, pool, ctx, &prompt, truncations)
+}
+
+pub fn execute_bounded_synthesis(
+    cfg: &lope_core::config::LopeCfg,
+    pool: &lope_providers::pool::Pool,
+    ctx: &Context,
+    prompt: &str,
+    truncations: Vec<Value>,
+) -> Option<SynthesisResult> {
+    let primary = pool.primary_validator();
+    let primary_slice: Vec<Arc<dyn Validator>> = primary.iter().cloned().collect();
+    let lim = Limits {
+        max_chunks: lope_core::config::LopeCfg::int_field(&cfg.max_chunks),
+        max_calls: lope_core::config::LopeCfg::int_field(&cfg.max_calls),
+        max_input_bytes: lope_core::config::LopeCfg::int_field(&cfg.max_input_bytes),
+    };
+    let timeout = cfg.timeout_secs() as f64;
+    let plan = plan_request_full(
+        prompt,
+        "synthesis",
+        &primary_slice,
+        &cfg.request_policy,
+        &lim,
+        timeout,
+        false,
+        false,
+        "bounded synthesis input",
+        "markdown",
+        0,
+        0,
+        None,
+        None,
+    );
+    ctx.add_request_plan(plan.json.clone());
+    if plan.action == "reject" {
+        ctx.budget
+            .mark_partial(&format!("budget_exhausted_optional: {}", plan.reason));
+        return Some(SynthesisResult {
+            ok: false,
+            text: String::new(),
+            primary: primary.as_ref().map(|p| p.name().to_string()).unwrap_or_default(),
+            error: format!("input_limit: {}", plan.reason),
+            truncations,
+        });
+    }
+    if !ctx.budget.can_fund(timeout, 1, prompt.len()) {
+        let reason = "budget_exhausted_optional: synthesis skipped; full call cannot fit";
+        ctx.budget.mark_partial(reason);
+        ctx.budget.add_event(
+            "optional_stage_skipped",
+            vec![("stage", json!("synthesis")), ("reason", json!(reason))],
+        );
+        return Some(SynthesisResult {
+            ok: false,
+            text: String::new(),
+            primary: primary.as_ref().map(|p| p.name().to_string()).unwrap_or_default(),
+            error: reason.into(),
+            truncations,
+        });
+    }
+    let child_ctx = ctx.child(Some("synthesis"), None);
+    Some(run_synthesis(
+        primary.as_deref(),
+        prompt,
+        timeout,
+        truncations,
+        Some(&child_ctx),
+    ))
+}
+
+pub fn synth_json_value(synth: &SynthesisResult) -> Value {
+    json!({
+        "ok": synth.ok,
+        "primary": synth.primary,
+        "text": if synth.ok { format_synthesis(synth, true) } else { String::new() },
+        "error": if !synth.ok { synth.error.clone() } else { String::new() },
+        "truncations": synth.truncations,
+    })
 }

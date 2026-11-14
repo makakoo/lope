@@ -71,13 +71,13 @@
    ]
   },
   {
-   "name": "ask-synth-delegates",
+   "name": "ask-synth-native",
    "argv": [
     "ask",
     "Q?",
     "--synth"
    ],
-   "route": "delegate"
+   "route": "native"
   },
   {
    "name": "pipe-basic",
@@ -115,13 +115,13 @@
    ]
   },
   {
-   "name": "pipe-synth-replays-stdin",
+   "name": "pipe-synth-native",
    "argv": [
     "pipe",
     "--synth"
    ],
    "stdin": "Q\n",
-   "route": "delegate"
+   "route": "native"
   },
   {
    "name": "pipe-http-provider-replays-stdin",

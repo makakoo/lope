@@ -364,6 +364,22 @@ impl RunBudget {
         self.inner.lock().unwrap().request_plans.push(plan);
     }
 
+    pub fn add_artifact(&self, kind: &str, path: &str, fields: Vec<(&str, Value)>) {
+        let mut item = Map::new();
+        item.insert("kind".into(), json!(kind));
+        item.insert("path".into(), json!(path));
+        for (k, v) in fields {
+            if !v.is_null() {
+                item.insert(k.into(), v);
+            }
+        }
+        let val = Value::Object(item);
+        let mut g = self.inner.lock().unwrap();
+        if !g.artifacts.contains(&val) {
+            g.artifacts.push(val);
+        }
+    }
+
     pub fn records(&self) -> Vec<CallRecord> {
         self.inner.lock().unwrap().records.clone()
     }

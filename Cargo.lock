@@ -251,6 +251,7 @@ dependencies = [
  "libc",
  "lope-compat",
  "lope-core",
+ "lope-engine",
  "lope-memory",
  "lope-providers",
  "lope-runtime",
@@ -285,10 +286,17 @@ dependencies = [
 name = "lope-engine"
 version = "2.0.0"
 dependencies = [
+ "fancy-regex",
+ "lope-core",
  "lope-makakoo",
  "lope-memory",
  "lope-providers",
  "lope-state",
+ "regex",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
 ]
 
 [[package]]
@@ -453,6 +461,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4148590afebada386688f18773da617792bf2ef03ffc1e4cbd2b1d45b023e0ba"
 dependencies = [
  "serde_core",
+ "serde_derive",
 ]
 
 [[package]]

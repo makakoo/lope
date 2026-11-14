@@ -1,12 +1,13 @@
 //! `lope compare` (`cli.py:_cmd_compare`), DIRECT plans only.
 
 use super::ask::{prepare, Prepared};
-use super::fanout::{err_text, fanout_generate};
+use super::fanout::{self, err_text, fanout_generate};
 use super::scope::{self, os_str};
 use super::vote::{parse_vote, winner};
 use super::{Native, Out};
 use clap::ArgMatches;
 use lope_core::pyjson::{dumps, Opts};
+use lope_engine::synthesis::format_synthesis;
 use serde_json::{json, Value};
 
 pub fn run(m: &ArgMatches) -> Native {
@@ -92,6 +93,15 @@ pub fn run(m: &ArgMatches) -> Native {
     if !ok {
         scope.ctx.budget.mark_partial(&reason);
     }
+    let synth = if ok {
+        let task = format!(
+            "Compare {fa} (A) vs {fb} (B) against criteria: {criteria}\nTally: A={}  B={}",
+            tally[0].1, tally[1].1
+        );
+        fanout::maybe_synthesize(m, &cfg, &pool, &scope.ctx, &rows, &task, None, false)
+    } else {
+        None
+    };
     let win = winner(&tally);
     if json_mode {
         let mut p = serde_json::Map::new();
@@ -106,6 +116,9 @@ pub fn run(m: &ArgMatches) -> Native {
                 picks.iter().map(|(n, c, r, e)| json!({"validator": n, "chose": c, "raw": r, "error": e})).collect(),
             ),
         );
+        if let Some(s) = &synth {
+            p.insert("synthesis".into(), fanout::synth_json_value(s));
+        }
         p.insert("runtime".into(), scope.ctx.budget.snapshot());
         if !ok {
             p.insert("partial".into(), json!(true));
@@ -135,6 +148,10 @@ pub fn run(m: &ArgMatches) -> Native {
         Some("A") => out.line(format!("Winner: A  ({fa})")),
         Some("B") => out.line(format!("Winner: B  ({fb})")),
         _ => out.line("No winner — tie."),
+    }
+    if let Some(s) = &synth {
+        out.blank();
+        out.line(format_synthesis(s, false));
     }
     drop(out);
     if !ok {
