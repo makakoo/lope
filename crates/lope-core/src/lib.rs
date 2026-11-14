@@ -27,6 +27,18 @@ pub fn version_line() -> String {
     format!("lope {PRODUCT_VERSION} (super-lope; compat {COMPAT_VERSION})")
 }
 
+/// Lowercase hex SHA-256 of `bytes`.
+pub fn sha256_hex(bytes: &[u8]) -> String {
+    use sha2::{Digest, Sha256};
+    let d = Sha256::digest(bytes);
+    let mut s = String::with_capacity(64);
+    for b in d {
+        use std::fmt::Write;
+        let _ = write!(&mut s, "{b:02x}");
+    }
+    s
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

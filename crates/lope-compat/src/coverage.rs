@@ -108,6 +108,67 @@ pub static COVERAGE: &[Coverage] = &[
     Coverage { path: &["team", "enable"], args: &["names", "--primary"], since: "S3" },
     Coverage { path: &["team", "disable"], args: &["names"], since: "S3" },
     Coverage { path: &["team", "remove"], args: &["name"], since: "S3" },
+    Coverage {
+        path: &["team", "add"],
+        args: &[
+            "name",
+            "--cmd",
+            "--stdin",
+            "--url",
+            "--model",
+            "--key-env",
+            "--key-header",
+            "--key-prefix",
+            "--response-path",
+            "--body-json",
+            "--from-curl",
+            "--wrap",
+            "--timeout",
+            "--max-tokens",
+            "--primary",
+            "--disabled",
+            "--force",
+        ],
+        since: "S3",
+    },
+    Coverage {
+        path: &["team", "test"],
+        args: &["name", "prompt", "--timeout"],
+        since: "S3",
+    },
+    Coverage {
+        path: &["team", "health"],
+        args: &["--timeout", "--json"],
+        since: "S3",
+    },
+    Coverage { path: &["configure"], args: &[], since: "S3" },
+    Coverage { path: &["memory"], args: &[], since: "S4" },
+    Coverage { path: &["memory", "stats"], args: &["--json"], since: "S4" },
+    Coverage {
+        path: &["memory", "search"],
+        args: &["query", "--min-score", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "file"],
+        args: &["path", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "hotspots"],
+        args: &["--days", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "forget"],
+        args: &["--hash", "--file"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "gates"],
+        args: &["--limit", "--json"],
+        since: "S4",
+    },
 ];
 
 pub fn verb_has_coverage(verb: &str) -> bool {

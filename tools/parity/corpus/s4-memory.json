@@ -1,0 +1,192 @@
+{
+ "comment": "S4 memory corpus (FR27, A12): native `lope memory` subcommands (`stats`, `search`, `file`, `hotspots`, `forget`, `gates`) vs Python Lope.",
+ "default_route": "native",
+ "cases": [
+  {
+   "name": "memory-default-empty",
+   "argv": [
+    "memory"
+   ]
+  },
+  {
+   "name": "memory-stats-seeded",
+   "argv": [
+    "memory",
+    "stats"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\ns.store_gate_session(task='gate check', mode='check', baseline_path='.lope/baseline.json', passed=True, gate_count=2, failed_count=0, payload={'ok': True})\n"
+  },
+  {
+   "name": "memory-stats-json",
+   "argv": [
+    "memory",
+    "stats",
+    "--json"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-search-hit",
+   "argv": [
+    "memory",
+    "search",
+    "injection",
+    "--min-score",
+    "0.5",
+    "--limit",
+    "5"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-search-json",
+   "argv": [
+    "memory",
+    "search",
+    "injection",
+    "--json"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-search-miss",
+   "argv": [
+    "memory",
+    "search",
+    "nonexistent"
+   ]
+  },
+  {
+   "name": "memory-file-hit",
+   "argv": [
+    "memory",
+    "file",
+    "auth.py",
+    "--limit",
+    "10"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-file-json",
+   "argv": [
+    "memory",
+    "file",
+    "auth.py",
+    "--json"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-file-miss",
+   "argv": [
+    "memory",
+    "file",
+    "missing.py"
+   ]
+  },
+  {
+   "name": "memory-hotspots-empty",
+   "argv": [
+    "memory",
+    "hotspots",
+    "--days",
+    "30",
+    "--limit",
+    "5"
+   ]
+  },
+  {
+   "name": "memory-hotspots-seeded",
+   "argv": [
+    "memory",
+    "hotspots",
+    "--days",
+    "30",
+    "--limit",
+    "5"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-hotspots-json",
+   "argv": [
+    "memory",
+    "hotspots",
+    "--json"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-gates-empty",
+   "argv": [
+    "memory",
+    "gates",
+    "--limit",
+    "5"
+   ]
+  },
+  {
+   "name": "memory-gates-seeded",
+   "argv": [
+    "memory",
+    "gates",
+    "--limit",
+    "5"
+   ],
+   "setup_py": "from lope.memory import open_memory\ns = open_memory()\ns.store_gate_session(task='gate check', mode='check', baseline_path='.lope/baseline.json', passed=True, gate_count=3, failed_count=0, payload={'ok': True})\ns.store_gate_session(task='gate check', mode='save', baseline_path='', passed=False, gate_count=2, failed_count=1, payload={'ok': False})\n"
+  },
+  {
+   "name": "memory-gates-json",
+   "argv": [
+    "memory",
+    "gates",
+    "--json"
+   ],
+   "setup_py": "from lope.memory import open_memory\ns = open_memory()\ns.store_gate_session(task='gate check', mode='check', baseline_path='.lope/baseline.json', passed=True, gate_count=3, failed_count=0, payload={'ok': True})\n"
+  },
+  {
+   "name": "memory-forget-hash",
+   "argv": [
+    "memory",
+    "forget",
+    "--hash",
+    "f5489477c8c8bc07"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-forget-file",
+   "argv": [
+    "memory",
+    "forget",
+    "--file",
+    "auth.py"
+   ],
+   "setup_py": "from lope.memory import open_memory\nfrom lope.findings import ConsensusFinding, ConsensusLevel\ns = open_memory()\nf = ConsensusFinding(message='SQL injection in login', file='src/auth.py', line=42, severity='high', category='security', confidence_max=0.9, confidence_avg=0.9, consensus_score=0.9, consensus_level=ConsensusLevel.CONFIRMED, agreement_count=2, total_validators=2, agreement_ratio=1.0, detected_by=['claude','codex'], evidence={'claude':'line 42'})\ns.store_review_session(task='lope review src/auth.py', focus='security', target_path='src/auth.py', validators=['claude','codex'], findings=[f])\n"
+  },
+  {
+   "name": "memory-forget-missing-args",
+   "argv": [
+    "memory",
+    "forget"
+   ],
+   "expect": {
+    "exit": 2
+   }
+  },
+  {
+   "name": "memory-disabled-off",
+   "argv": [
+    "memory",
+    "stats"
+   ],
+   "env": {
+    "LOPE_MEMORY": "off"
+   },
+   "expect": {
+    "exit": 1
+   }
+  }
+ ]
+}

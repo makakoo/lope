@@ -6,6 +6,7 @@ mod compare;
 mod discover;
 mod fanout;
 mod jobs;
+mod memory;
 mod scope;
 mod status;
 mod team;
@@ -77,6 +78,9 @@ pub fn run(inv: &Invocation) -> Native {
         ["compare"] => compare::run(&inv.matches),
         ["team"] => team::run(None, &inv.matches),
         ["team", sub] => team::run(Some(sub), &inv.matches),
+        ["configure"] => discover::run_configure(),
+        ["memory"] => memory::run(None, &inv.matches),
+        ["memory", sub] => memory::run(Some(sub), &inv.matches),
         other => {
             unreachable!("coverage table lists {other:?} but lope-cli has no native implementation")
         }
@@ -104,6 +108,13 @@ mod tests {
                         | ["jobs", "list" | "reap" | "prune" | "kill"]
                         | ["ask"]
                         | ["pipe"]
+                        | ["vote"]
+                        | ["compare"]
+                        | ["team"]
+                        | ["team", "list" | "remove" | "enable" | "disable" | "add" | "test" | "health"]
+                        | ["configure"]
+                        | ["memory"]
+                        | ["memory", "stats" | "search" | "file" | "hotspots" | "forget" | "gates"]
                 ),
                 "add a native implementation for {:?}",
                 c.path
