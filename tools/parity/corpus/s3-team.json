@@ -146,15 +146,159 @@
    ]
   },
   {
-   "name": "team-add-delegates",
+   "name": "team-add-subprocess",
    "argv": [
     "team",
     "add",
     "new-one",
     "--cmd",
     "echo {prompt}"
+   ]
+  },
+  {
+   "name": "team-add-subprocess-auto-prompt",
+   "argv": [
+    "team",
+    "add",
+    "auto-prompt",
+    "--cmd",
+    "mybin --flag",
+    "--wrap",
+    "Terse: {prompt}",
+    "--timeout",
+    "90"
+   ]
+  },
+  {
+   "name": "team-add-http",
+   "argv": [
+    "team",
+    "add",
+    "my-http",
+    "--url",
+    "http://127.0.0.1:18080/v1/chat/completions",
+    "--model",
+    "qwen",
+    "--key-env",
+    "OPENAI_API_KEY",
+    "--max-tokens",
+    "512",
+    "--primary"
+   ]
+  },
+  {
+   "name": "team-add-from-curl",
+   "argv": [
+    "team",
+    "add",
+    "from-curl",
+    "--from-curl",
+    "curl https://api.openai.com/v1/chat/completions -H 'Authorization: Bearer ${OPENAI_API_KEY}' -d '{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}'",
+    "--disabled"
+   ]
+  },
+  {
+   "name": "team-add-from-curl-literal-refused",
+   "argv": [
+    "team",
+    "add",
+    "bad-curl",
+    "--from-curl",
+    "curl https://api.openai.com/v1/chat/completions -H 'Authorization: Bearer sk-123456' -d '{\"model\":\"gpt-4o\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}]}'"
+   ]
+  },
+  {
+   "name": "team-add-builtin-refused",
+   "argv": [
+    "team",
+    "add",
+    "claude",
+    "--cmd",
+    "claude -p {prompt}"
+   ]
+  },
+  {
+   "name": "team-add-duplicate-refused",
+   "argv": [
+    "team",
+    "add",
+    "mock-a",
+    "--cmd",
+    "echo {prompt}"
+   ]
+  },
+  {
+   "name": "team-add-duplicate-force",
+   "argv": [
+    "team",
+    "add",
+    "mock-a",
+    "--cmd",
+    "echo {prompt}",
+    "--force"
+   ]
+  },
+  {
+   "name": "team-test-ok",
+   "argv": [
+    "team",
+    "test",
+    "mock-a",
+    "ping"
+   ]
+  },
+  {
+   "name": "team-test-unknown",
+   "argv": [
+    "team",
+    "test",
+    "ghost"
+   ]
+  },
+  {
+   "name": "team-test-fail",
+   "argv": [
+    "team",
+    "test",
+    "mock-fail"
    ],
-   "route": "delegate"
+   "validators": [
+    "mock-a",
+    "mock-fail"
+   ]
+  },
+  {
+   "name": "team-health-text",
+   "argv": [
+    "team",
+    "health"
+   ]
+  },
+  {
+   "name": "team-health-json",
+   "argv": [
+    "team",
+    "health",
+    "--json"
+   ]
+  },
+  {
+   "name": "team-health-fail",
+   "argv": [
+    "team",
+    "health"
+   ],
+   "validators": [
+    "mock-a",
+    "mock-fail"
+   ]
+  },
+  {
+   "name": "configure-non-interactive",
+   "argv": [
+    "configure"
+   ],
+   "setup_py": "p=os.path.join(os.environ['GOLDEN_BASE'],'mockbin','claude');open(p,'w').write('#!/bin/sh\\nexit 0\\n');os.chmod(p,0o755)\n"
   }
  ]
 }

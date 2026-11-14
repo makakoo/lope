@@ -1,7 +1,27 @@
 //! The `---VERDICT---…---END---` parser (`validators.py:parse_opencode_verdict`),
 //! JSON-first with the YAML-ish fallback, confidence gate and evidence gate.
 
-use crate::models::{PhaseVerdict, VerdictStatus};
+pub use crate::models::{PhaseVerdict, ValidatorResult, VerdictStatus};
+pub use parse_verdict as parse_opencode_verdict;
+
+pub fn infra_error(
+    validator_name: &str,
+    error_msg: &str,
+    duration: f64,
+) -> ValidatorResult {
+    ValidatorResult {
+        validator_name: validator_name.to_string(),
+        verdict: PhaseVerdict::new(VerdictStatus::InfraError, error_msg, duration, validator_name),
+        raw_response: String::new(),
+        error: error_msg.to_string(),
+        flag_error_hint: String::new(),
+        repair_attempted: false,
+        repair_status: None,
+        repaired_response: String::new(),
+        initial_parse_status: None,
+        parse_error_category: None,
+    }
+}
 use crate::pyre::{is_match, re, search, splitlines};
 use fancy_regex::Regex;
 use lope_core::pyjson;

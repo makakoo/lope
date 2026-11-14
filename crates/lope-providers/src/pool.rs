@@ -3,8 +3,8 @@
 //! Anything not native yet is reported in `unsupported` so the verb can
 //! delegate to Python before any side effect.
 
-use crate::builtin::Builtin;
-use crate::generic::{Subprocess, Validator};
+use crate::builtin::{Builtin, MakakooAdapter};
+use crate::generic::{Http, Subprocess, Validator};
 use lope_core::config::LopeCfg;
 use serde_json::{json, Value};
 use std::sync::Arc;
@@ -29,7 +29,7 @@ impl Pool {
     }
 }
 
-const KNOWN_GENERIC: [(&str, &[&str]); 9] = [
+const KNOWN_GENERIC: [(&str, &[&str]); 10] = [
     ("vibe", &["vibe", "run", "{prompt}"]),
     ("ollama", &["ollama", "run", "qwen3:8b", "{prompt}"]),
     ("goose", &["goose", "run", "--text", "{prompt}"]),
@@ -39,25 +39,11 @@ const KNOWN_GENERIC: [(&str, &[&str]); 9] = [
     ("amazon-q", &["q", "chat", "{prompt}"]),
     ("pi", &["pi", "--no-session", "--offline", "--no-tools", "-p", "{prompt}"]),
     ("qwen", &["qwen", "-p", "{prompt}"]),
+    ("agy", &["agy", "-p", "{prompt}"]),
 ];
 
 fn makakoo_adapters() -> Vec<String> {
-    if std::env::var("LOPE_MAKAKOO_ADAPTERS").as_deref() == Ok("0") {
-        return vec![];
-    }
-    let dir = lope_core::paths::home_dir().join(".makakoo").join("adapters").join("registered");
-    std::fs::read_dir(dir)
-        .map(|rd| {
-            rd.flatten()
-                .filter_map(|e| {
-                    e.path()
-                        .file_stem()
-                        .filter(|_| e.path().extension().is_some_and(|x| x == "toml"))
-                        .map(|s| s.to_string_lossy().into_owned())
-                })
-                .collect()
-        })
-        .unwrap_or_default()
+    crate::builtin::enumerate_registered_adapters()
 }
 
 const LEARNED_TTL: f64 = 90.0 * 24.0 * 3600.0;
@@ -105,9 +91,6 @@ pub fn build(cfg: &LopeCfg) -> Pool {
         };
         if v.is_none() {
             if let Some(k) = builtin {
-                if matches!(k, "opencode" | "aider") {
-                    pool.unsupported.push(format!("{name}: built-in not ported yet"));
-                }
                 v = Some(Arc::new(Builtin::new(k)));
             } else if let Some((_, e)) = providers.iter().find(|(k, _)| *k == name) {
                 match e.get("type").and_then(Value::as_str) {
@@ -123,8 +106,20 @@ pub fn build(cfg: &LopeCfg) -> Pool {
                             continue;
                         }
                     },
+                    Some("http") => match Http::from_config(e) {
+                        Ok(h) => {
+                            if let Some(u) = h.unsupported() {
+                                pool.unsupported.push(u);
+                            }
+                            v = Some(Arc::new(h));
+                        }
+                        Err(_) => {
+                            pool.unsupported.push(format!("{name}: provider config error"));
+                            continue;
+                        }
+                    },
                     _ => {
-                        pool.unsupported.push(format!("{name}: http provider"));
+                        pool.unsupported.push(format!("{name}: provider config error"));
                         continue;
                     }
                 }
@@ -133,8 +128,7 @@ pub fn build(cfg: &LopeCfg) -> Pool {
                     Subprocess::from_config(&json!({"name": name, "type": "subprocess", "command": cmd})).unwrap(),
                 ));
             } else if makakoo.get_or_insert_with(makakoo_adapters).contains(&name) {
-                pool.unsupported.push(format!("{name}: makakoo adapter"));
-                continue;
+                v = Some(Arc::new(MakakooAdapter::new(&name)));
             } else {
                 pool.warnings.push(format!("lope.validators | Unknown validator: {name}"));
                 continue;

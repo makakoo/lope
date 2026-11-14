@@ -67,6 +67,11 @@ pub struct ValidatorResult {
     pub raw_response: String,
     pub error: String,
     pub flag_error_hint: String,
+    pub repair_attempted: bool,
+    pub repair_status: Option<String>,
+    pub repaired_response: String,
+    pub initial_parse_status: Option<String>,
+    pub parse_error_category: Option<String>,
 }
 
 impl ValidatorResult {

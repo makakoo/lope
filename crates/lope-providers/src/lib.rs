@@ -7,6 +7,7 @@
 
 pub mod budget;
 pub mod builtin;
+pub mod curl;
 pub mod diagnostics;
 pub mod errors;
 pub mod generic;
