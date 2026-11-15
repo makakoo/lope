@@ -114,6 +114,11 @@ impl Auditor {
         }
         f.write_all(bullets.join("\n").as_bytes())?;
         f.write_all(b"\n")?;
+        eprintln!(
+            "lope.auditor | [auditor] wrote {} bullet(s) to {}",
+            bullets.len(),
+            path.display()
+        );
         Ok(path)
     }
 

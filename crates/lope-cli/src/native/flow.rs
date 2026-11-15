@@ -5,7 +5,7 @@ use clap::ArgMatches;
 use lope_engine::auditor::Auditor;
 use lope_flow::{
     flow_report_to_execution_report, forecast_graph, get_template, load_flow_graph, render_file,
-    template_names, validate_graph, FlowRunner,
+    template_names, validate_graph, write_flow_run, FlowRunner,
 };
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -88,7 +88,9 @@ fn run_validate(m: &ArgMatches) -> Native {
             return Native::Exit(1);
         }
     };
-    let cap = graph.max_node_visits().unwrap_or(50);
+    let cap = graph
+        .max_node_visits()
+        .unwrap_or_else(|_| (8 * graph.nodes.len()).max(50));
     println!(
         "OK: {} — {} nodes, {} edges, runaway cap {}",
         graph.name,
@@ -148,12 +150,21 @@ fn run_render(m: &ArgMatches) -> Native {
 }
 
 fn run_run(m: &ArgMatches) -> Native {
+    let _run_lock = match lope_state::runlock::acquire("flow") {
+        Ok(lock) => lock,
+        Err(busy) => {
+            eprint!("{}", busy.message);
+            return Native::Exit(lope_state::runlock::EXIT_TEMPFAIL);
+        }
+    };
     let Some(wf) = scope::os_str(m, "workflow") else {
         eprintln!("lope flow run: missing workflow path");
         return Native::Exit(2);
     };
     let task = scope::os_str(m, "--task").unwrap_or_default();
-    let cwd = scope::os_str(m, "--cwd").map(PathBuf::from);
+    let cwd = scope::os_str(m, "--cwd")
+        .map(PathBuf::from)
+        .unwrap_or_else(|| std::env::current_dir().unwrap_or_else(|_| PathBuf::from(".")));
     let out_path = scope::os_str(m, "--out");
     let max_node_visits = scope::u64_of(m, "--max-node-visits").map(|v| v as usize);
     let no_journal = scope::flag(m, "--no-journal");
@@ -162,29 +173,32 @@ fn run_run(m: &ArgMatches) -> Native {
     let graph = match load_flow_graph(Path::new(&wf)) {
         Ok(g) => g,
         Err(e) => {
-            eprintln!("lope flow run: {e}");
-            return Native::Exit(1);
+            eprintln!("lope flow: {e}");
+            return Native::Exit(2);
         }
     };
     let warnings = match validate_graph(&graph) {
         Ok(w) => w,
         Err(e) => {
-            eprintln!("lope flow run: {e}");
-            return Native::Exit(1);
+            eprintln!("lope flow: {e}");
+            return Native::Exit(2);
+        }
+    };
+    let (cfg, pool) = match scope::resolve(m) {
+        Ok(x) => x,
+        Err(e) => {
+            drop(_run_lock);
+            return Native::Delegate(format!("flow run: {e}"));
         }
     };
     for w in &warnings {
         eprintln!("WARNING: {w}");
     }
 
-    let (cfg, pool) = match scope::resolve(m) {
-        Ok(x) => x,
-        Err(e) => return Native::Delegate(format!("flow run: {e}")),
-    };
+    let forecast = forecast_graph(&graph, &pool.validators, &cfg);
 
     if dry_run {
-        let fc = forecast_graph(&graph, &pool.validators, &cfg);
-        println!("{}", serde_json::to_string_pretty(&fc).unwrap_or_default());
+        println!("{}", serde_json::to_string_pretty(&forecast).unwrap_or_default());
         return Native::Exit(0);
     }
 
@@ -196,12 +210,32 @@ fn run_run(m: &ArgMatches) -> Native {
         }
     };
 
+    println!(
+        "\nLope flow: {} ({} nodes)  ·  cwd={}\n",
+        graph.name,
+        graph.nodes.len(),
+        cwd.display()
+    );
+    println!(
+        "Flow forecast: {} theoretical model calls · cap {} · {} static chunk(s)",
+        forecast["theoretical_model_calls"],
+        forecast["max_model_calls"],
+        forecast["static_prompt_chunks"],
+    );
+    if let Some(warns) = forecast["warnings"].as_array() {
+        for w in warns {
+            if let Some(s) = w.as_str() {
+                println!("  warning: {s}");
+            }
+        }
+    }
+
     let ctx_arc = Arc::new(sc.ctx.clone());
-    let mut runner = match FlowRunner::new(graph, pool, cfg, cwd, Some(ctx_arc)) {
+    let mut runner = match FlowRunner::new(graph, pool, cfg, Some(cwd), Some(ctx_arc)) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("lope flow run: {e}");
-            return Native::Exit(scope::finish(sc, 1));
+            eprintln!("lope flow: {e}");
+            return Native::Exit(scope::finish(sc, 2));
         }
     };
     if let Some(mv) = max_node_visits {
@@ -211,22 +245,34 @@ fn run_run(m: &ArgMatches) -> Native {
     let report = match runner.run(&task) {
         Ok(r) => r,
         Err(e) => {
-            eprintln!("lope flow run: {e}");
-            return Native::Exit(scope::finish(sc, 1));
+            eprintln!("lope flow: {e}");
+            return Native::Exit(scope::finish(sc, 2));
         }
     };
 
-    println!("{}", report.scorecard());
+    let exec_rep = flow_report_to_execution_report(&report);
+    let auditor = Auditor::new(None);
+    println!("\n{}", auditor.scorecard(&exec_rep));
+
     if let Some(path) = out_path {
-        let json_str = serde_json::to_string_pretty(&report.to_json()).unwrap_or_default();
-        if let Err(e) = fs::write(&path, json_str) {
-            eprintln!("lope flow run: warning: failed writing {path}: {e}");
+        match write_flow_run(&report, &path) {
+            Ok(written) => println!("\nTrace written to: {}", written.display()),
+            Err(e) => eprintln!("lope flow run: warning: failed writing {path}: {e}"),
         }
     }
     if !no_journal {
-        let exec_rep = flow_report_to_execution_report(&report);
-        let _ = Auditor::new(None).write_journal(&exec_rep);
+        let _ = auditor.write_journal(&exec_rep);
     }
-    let exit_code = if report.ok { 0 } else { 1 };
-    Native::Exit(scope::finish(sc, exit_code))
+
+    if report.ok {
+        println!("\nFlow complete.\n");
+        println!("{}", lope_core::logo::mascot("flowed. autonomously."));
+        Native::Exit(scope::finish(sc, 0))
+    } else if let Some(esc) = &report.escalation {
+        println!("\nEscalation: {esc}");
+        Native::Exit(scope::finish(sc, 1))
+    } else {
+        println!("\nFlow ended at a fail-exit (changes requested) — not an escalation.");
+        Native::Exit(scope::finish(sc, 1))
+    }
 }

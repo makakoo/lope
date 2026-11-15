@@ -6,11 +6,11 @@ Inject the authoritative lope reference into the current session and answer the 
 </objective>
 
 <steps>
-1. Run `lope docs` in a shell (or `PYTHONPATH=~/.lope python3 -m lope docs` only for a verified Git checkout at `~/.lope` and a missing PATH command). The output is the complete structured reference — modes, flags, domains, env vars, per-host support matrix, troubleshooting.
+1. Run `lope docs` in a shell. The output is the complete structured reference — modes, flags, domains, env vars, per-host support matrix, troubleshooting.
 
 2. Read the entire output carefully. Do NOT answer from memory of lope — memory drifts across versions and you will make up flags that do not exist.
 
-3. Answer the user's question from the reference. Quote specific sections when helpful. If the user's question is not covered in the reference, say so explicitly and point them at `lope <mode> --help` or https://github.com/traylinx/lope/issues.
+3. Answer the user's question from the reference. Quote specific sections when helpful. If the user's question is not covered in the reference, say so explicitly and point them at `lope <mode> --help` or https://github.com/makakoo/lope/issues.
 </steps>
 
 <do_not>

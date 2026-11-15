@@ -18,7 +18,9 @@ Lope is primarily a CLI harness that runs **other** AI CLIs as validators. You i
 
 Works for **three domains**: `engineering` (default), `business`, `research`. Same loop, different validator role prompt and artifact labels. The domain knob applies to `negotiate`; single-shot verbs are domain-agnostic.
 
-Repo: https://github.com/traylinx/lope · MIT · Zero Python dependencies (pure stdlib).
+Version: `lope 2.0.0 (compat 0.17.3)` (`/usr/local/bin/lope` native Rust CLI; `/usr/local/bin/lope-py` Python `0.17.3` rollback).
+
+Repo: https://github.com/makakoo/lope (`v2` branch for Lope 2.0) · MIT · Native Rust CLI (replaces Python runtime on `/usr/local/bin/lope`; emergency Python fallback via `LOPE_FORCE_PYTHON=1` or `lope-py`).
 
 ---
 
@@ -43,7 +45,7 @@ Command surface: structured sprint modes (`negotiate`, `execute`, `implement`, `
 | **Memory** | `lope memory {stats,search,file,hotspots,forget}` | — | Query the persistent finding store written by `lope review --remember`. See [docs/memory.md](memory.md). |
 | **Deliberate** | `lope deliberate <template> <scenario>` | — | Run a 7-stage Agent-Order-style council on an ADR / PRD / RFC / build-vs-buy / migration-plan / incident-review. See [docs/deliberation.md](deliberation.md). |
 | **Flow** *(v0.11)* | `lope flow {run,validate,render,init,list}` | `/lope-flow` | Run a declarative DOT **graph** workflow — agent / ensemble-review / shell-gate / judge-router nodes, conditioned edges, fan-out + fix-loops. Autonomous (no human gates), bounded by per-node and graph-wide visit caps. See [Flow](#flow--declarative-graph-workflows). |
-| **Update** | `lope update` (`lope upgrade` alias) | — | Self-update Lope. Git installs pull with `--ff-only` and refresh host skills. Pip mode exists for future package installs, but the supported server path today is the `~/.lope` git checkout until PyPI Trusted Publisher is configured. |
+| **Update** | `lope update` (`lope upgrade` alias) | — | Delegated to the Python updater (`0.17.3`) in Lope v2.0.0 (`FR38`/`OQ-2`) until native `makakoo/lope` (`v2`) self-update / Homebrew distribution settles. Supports `--dry-run`, `--method`, `--host`, `--skip-install`, `--allow-dirty`. |
 | **Headroom** | — | `/lope-headroom` | Configure, install, verify, or troubleshoot Headroom MCP compression for Lope and Lope-installed agent hosts. |
 | **Help** | `lope docs` | `/lope-help` | Print the complete reference containing all modes, flags, and hard rules. |
 
@@ -67,6 +69,9 @@ These flags layer on top of the existing modes. They are **opt-in** — commands
 | `--brain-context QUERY` | `ask`, `review`, `pipe`, `negotiate`, `deliberate` | Pull `makakoo search QUERY` and prepend to the validator prompts. |
 | `--brain-budget N` | same as above | Approximate token budget for brain context (default 1200). |
 | `--brain-log` | same as above | Append a `[[Lope]]` / `[[Makakoo OS]]` bullet to today's Brain journal. |
+| `--version` / `-V` | top-level `lope` | Normalized to `lope version` — prints `lope 2.0.0 (compat 0.17.3)`. |
+| `--consensus quorum` | `review` | Normalized to `review --consensus` (unsupported modes such as `unanimous` exit `2`). |
+| `--rounds N` | `negotiate` | Compatibility alias normalized to `--max-rounds N`. |
 
 ---
 
@@ -398,7 +403,7 @@ Thresholds:
 - `max_delta_drop` constrains `before - after` during `gate check`.
 - `required: false` records an optional gate without failing the run.
 
-Exit codes: `0` all required gates pass; `1` at least one required gate fails/regresses; `2` config or usage error. `--json` keeps stdout parseable for CI and agentic apps. `--remember` stores the run in Lope memory; `lope memory gates` lists recent gate sessions.
+Exit codes: `0` all required gates pass; `1` at least one required gate fails/regresses; `2` config or usage error; `3` refused untrusted repository gates in non-interactive mode (pass `--trust` or set `LOPE_TRUST_GATES=1`). `--json` keeps stdout parseable for CI and agentic apps. `--remember` stores the run in Lope memory; `lope memory gates` lists recent gate sessions.
 
 Security note: gate commands are project-authored shell commands and run with the caller's permissions. Treat `.lope/rules.json` like CI configuration — **only run gates from a repository you trust.** Because the commands come from the repo, Lope gates their execution behind an explicit trust decision: the first time a repo's gate commands would run, it lists them and asks for confirmation, remembering the choice per repository and per command-set (changing the commands re-prompts; trust is stored in `$LOPE_HOME/trusted_gates.json`). In a non-interactive session Lope **refuses** to run untrusted gate commands unless you pass `--trust` or set `LOPE_TRUST_GATES=1`. Lope redacts captured output before display/storage, but it does not sandbox the commands.
 
@@ -557,31 +562,26 @@ Interactive validator picker. Writes to `~/.lope/config.json`.
 
 ### `lope install`
 
-Install or refresh host skills and wrappers from this version's bundled assets (wheel) or source tree (Git). `lope install --host <host>` scopes the refresh without updating the engine. Existing files are backed up under `${XDG_STATE_HOME:-~/.local/state}/lope/install-backups/`; symlinks are preserved as links. Config and runtime history are untouched. Bash 3.2+ is required; native Windows host installation is unqualified.
+Install or refresh host skills and commands across all 8 hosts (`claude`, `codex`, `gemini`, `opencode`, `cursor`, `vibe`, `qwen`, `pi`, or `all`) from bundled assets next to the binary or `LOPE_SOURCE_DIR`. Installed skills invoke `lope <verb>` directly through the native binary — never via a Python module wrapper. Existing files are backed up under `${XDG_STATE_HOME:-~/.local/state}/lope/install-backups/`; symlinks are preserved as links. Config and runtime history are untouched. Bash 3.2+ is required.
 
 ### `lope update` / `lope upgrade`
 
-Self-update Lope. Default mode auto-detects whether the running copy is a git checkout or a pip install. Both Git checkouts and Python virtualenv packages are supported. For pipx use `pipx upgrade lope-agent` then `lope install`.
+In Lope v2.0.0 (`FR38` / `OQ-2`), `update` and `upgrade` delegate to the Python helper (`0.17.3`) while native distribution for `makakoo/lope` (`v2` branch) settles. Supported flags remain `--dry-run`, `--method`, `--host <host>`, `--skip-install`, and `--allow-dirty`. For native Lope v2 binary upgrades from source, rebuild from the `v2` branch of `https://github.com/makakoo/lope` and reinstall `/usr/local/bin/lope`.
 
 ```bash
-lope update
 lope update --dry-run
-lope update --host codex       # update code, then refresh only Codex skills
-lope update --skip-install     # pull code only
+lope update --host codex
+lope update --skip-install
 lope upgrade                   # legacy alias
 ```
 
-For a git checkout, Lope refuses tracked dirty files unless `--allow-dirty` is passed, validates the requested host before mutating the checkout, then runs `git fetch --tags <remote>` and `git pull --ff-only <remote> <branch>`. Unless `--skip-install` is passed, it then runs `./install --host <host>`. Untracked runtime state such as `~/.lope/config.json`, journals, and memory databases does not block the update. Pip mode runs `python -m pip install --upgrade lope-agent`, then starts a fresh `python -m lope install --host <host>` so the new package owns resource selection. `--skip-install` suppresses that refresh; a failed pip command never runs it.
+### `lope version` (and `lope --version` / `-V`)
 
-`--host` scopes the installer run after the engine update. For install-only host refresh without code update, run `lope install --host <host>`.
-
-### `lope version`
-
-Prints the version banner.
+Prints `lope 2.0.0 (compat 0.17.3)`.
 
 ### `lope docs`
 
-Prints this reference document to stdout. Pipe into `less` or redirect to a file.
+Prints this embedded Lope v2 reference document to stdout by default (not shadowed silently by legacy `$HOME/.lope/docs/reference.md`). Override only via explicit `LOPE_DOCS_PATH` (file path), `LOPE_SOURCE_DIR` (repo root), or `LOPE_FORCE_PYTHON=1`.
 
 ---
 
@@ -632,10 +632,15 @@ Custom providers via `~/.lope/config.json` — subprocess or HTTP. Schema in the
 | `LOPE_PRIMARY` | Primary validator name. Must be in `LOPE_VALIDATORS` (or the global config's list). |
 | `LOPE_PARALLEL` | `1`/`true` to force parallel ensemble, `0`/`false` for sequential. |
 | `LOPE_SEQUENTIAL` | `1` to force sequential (shortcut for `LOPE_PARALLEL=0`). |
-| **v0.4.0 self-heal** | |
-| `LOPE_SELF_HEAL` | `1` to opt into adapter self-healing on flag-break detection. Default off in v0.4.0. |
-| `LOPE_HOME` | Override `~/.lope` for the global config directory. Useful for sandboxed test runs. |
-| **v0.16.0 budget awareness** | |
+| **Lope v2 runtime & overrides** | |
+| `LOPE_FORCE_PYTHON` | `1` to delegate any invocation to the Python `0.17.3` rollback checkout (`/usr/local/bin/lope-py` / `$LOPE_HOME`). |
+| `LOPE_DOCS_PATH` | Explicit file path override for `lope docs`. |
+| `LOPE_SOURCE_DIR` | Explicit Lope repo/asset directory override for `lope install` and `lope docs`. |
+| `LOPE_FLOW_WORKERS` | Max concurrent worker branches in `lope flow run` wave execution (default `5`). |
+| **Self-heal** | |
+| `LOPE_SELF_HEAL` | `1`/`true`/`yes`/`on` to enable adapter self-healing on flag-break detection in `execute`, `implement`, and `negotiate` (opt-in; off by default). |
+| `LOPE_HOME` | Override `~/.lope` for shared state/config directory (`config.json`, `latency.json`, `journal.jsonl`, `memory.db`). |
+| **Budget awareness** | |
 | `LOPE_LATENCY` | `off` to disable the per-validator latency ledger entirely — no recording, no pre-launch budget advice. |
 | `LOPE_RESPECT_PROVIDER_TIMEOUT` | `1` to let a provider's configured `timeout` outrank `--timeout`. Same effect as `--respect-provider-timeout`. |
 
@@ -679,33 +684,33 @@ stay bounded to 10s.
 case — a provider configured slow *on purpose* (a high-reasoning-effort model)
 being clamped by a generic ceiling somebody guessed.
 
-## Config precedence (v0.4.0)
+## Config precedence
 
-Lope loads config with a 5-layer precedence chain, highest-wins per field:
+Lope loads shared validator config with a 5-layer precedence chain, highest-wins per field:
 
 1. **Command-line flags** — `--validators opencode,gemini --primary opencode --timeout 240`. Highest precedence. Zero persistence.
 2. **Environment variables** — `LOPE_VALIDATORS=opencode,gemini LOPE_PRIMARY=opencode`. Per-shell-session scope. Each terminal sets once, all `lope` calls in that shell inherit without touching any file.
 3. **Per-project config** — `./.lope/config.json` in the current working directory. Repo-scoped defaults. Fields not in the project file fall through to layer 4.
-4. **User global config** — `~/.lope/config.json`. Written by `lope configure`. Read-only for every other command.
+4. **User global config** — `~/.lope/config.json`. Shared `version: 1` format preserved for Python rollback (`lope-py`). Written by `lope configure` / `lope team` and learned-adapter heals.
 5. **Built-in defaults** — empty validators, 480s timeout, parallel=True. Only visible when the user has never configured lope.
 
-Each layer overrides the previous one **field-by-field**, not whole-object. You can set `LOPE_VALIDATORS` in your shell rc while still inheriting `timeout` and `providers` from the global file. You can have `--validators opencode,gemini` on the command line while env vars set the `primary`.
+**Lope v2 runtime settings:** Optional Rust-only settings (such as cleanup budget, fail-open opt-in, and PTY/daemon options) live in `~/.lope/v2/config.toml` rather than mixing Rust-only keys into `config.json`.
 
-**Why this matters:** v0.3.x had only one config file. Running two `lope negotiate` invocations from two terminals with different validator pools was impossible — whichever wrote last silently clobbered the other. v0.4.0 makes each terminal/each invocation self-contained: only `lope configure` touches the global file.
+Each layer overrides the previous one **field-by-field**, not whole-object. You can set `LOPE_VALIDATORS` in your shell rc while still inheriting `timeout` and `providers` from the global file.
 
-## Self-healing adapters (v0.4.0)
+## Self-healing adapters
 
-Each `Validator` subclass in `lope/validators.py` hardcodes the subprocess invocation for its host CLI (e.g. `claude --print <prompt>`, `opencode run --format json`). When a CLI vendor renames a flag in a future release, lope detects the failure and can automatically repair itself.
+Each built-in adapter defines the subprocess invocation for its host CLI (e.g. `claude --print <prompt>`, `opencode run --format json`). When a CLI vendor renames a flag in a future release, Lope v2 detects the failure and can repair it automatically across `execute`, `implement`, and `negotiate`.
 
 **How it works:**
 
 1. A validator subprocess fails with `unrecognized argument`, `unknown option`, or similar flag-surface error in stderr.
-2. Lope's `_is_flag_error()` heuristic matches the stderr pattern and the pool attaches a `flag_error_hint` to the validator result.
-3. If `LOPE_SELF_HEAL=1` is set, the `SelfHealer` runs `<cli> --help`, asks the primary reviewer in the pool to propose a corrected argv template (JSON object with `argv_template`, `stdin_mode`, `stdout_parser`, `confidence`, `rationale`), and validates the proposal.
+2. Lope's flag-error detector matches the stderr pattern and attaches `flag_error_hint` to the validator result.
+3. If `LOPE_SELF_HEAL=1` is set, the `SelfHealer` runs `<cli> --help`, asks an available reviewer in the pool (or falls back to the failing CLI if needed in single-writer flow) to propose a corrected argv template (`argv_template`, `stdin_mode`, `stdout_parser`, `confidence`, `rationale`), and validates the proposal.
 4. The healer smoke-tests the proposal with a fixed prompt: *"Reply with the single word OK and nothing else."* If the response contains "OK", the learned adapter is atomically persisted to `~/.lope/config.json` under `learned_adapters.<cli_name>`.
 5. Future calls to that CLI use the learned invocation. A 90-day TTL triggers re-verification.
 
-**Opt-in for v0.4.0.** Set `LOPE_SELF_HEAL=1` to enable. Default-off until telemetry confirms low false-positive rate; will flip to default-on in v0.5.0.
+**Opt-in:** Set `LOPE_SELF_HEAL=1` to enable automatic repair (off by default).
 
 **Guardrails:**
 
@@ -818,55 +823,29 @@ Modes via `LOPE_CAVEMAN` env var:
 
 ## Install
 
-**Isolated Python package (macOS/Linux):**
+**Lope v2.0.0 native binary (macOS/Linux):**
+
+Lope v2 (`2.0.0`) runs as a single native Rust executable at `/usr/local/bin/lope`, built from the `v2` branch of `https://github.com/makakoo/lope`:
 
 ```bash
-pipx install lope-agent
-lope install --host codex  # choose your host, or all
+git clone -b v2 https://github.com/makakoo/lope.git
+cd lope
+cargo build --release -p lope-cli
+sudo install -m 0755 target/release/lope /usr/local/bin/lope
+lope --version                  # lope 2.0.0 (compat 0.17.3)
+lope install --host all         # or pick a host: claude, codex, gemini, ...
 lope configure
 lope docs
 ```
 
-Python 3.9+ and Bash 3.2+ are required for host integration. The wheel includes
-skills, host wrappers, installer, and reference docs. No repository clone is needed.
-For upgrades: `pipx upgrade lope-agent`, then `lope install --host codex`.
-A regular virtualenv can use `python -m pip install lope-agent` and `lope update`.
-Keep an existing Git install if you have local modifications; do not layer a second
-installation over its shell alias/wrapper. Check `command -v lope` before switching.
-Native Windows host installation is not qualified; use a Linux environment.
+If upgrading a machine that previously used the legacy Python `0.17.3` checkout (`~/.lope`):
 
-Existing host files are moved to `${XDG_STATE_HOME:-~/.local/state}/lope/install-backups/`
-before replacement. Backups preserve symlinks as links, not snapshots of their
-external targets. Config, credentials, and runtime history are not rewritten.
-Review and merge your custom skills from the printed backup path; restarting a CLI
-is required to reload skills. Headroom remains optional and off by default.
+- Preserve `/usr/local/bin/lope-py` for instant rollback to Python `0.17.3` (or run any single command through Python with `LOPE_FORCE_PYTHON=1 lope ...`).
+- Remove any legacy Python `lope` shell alias pointing into `~/.lope` from your shell startup file so `lope` resolves to `/usr/local/bin/lope`.
+- Re-run `lope install --host all` from the Lope v2 checkout (or with `LOPE_SOURCE_DIR` pointing at it) so host skills invoke `lope ...` directly.
 
-
-**Preferred (paste-a-prompt):** Paste one line into any AI agent you already use:
-
-```
-Read https://raw.githubusercontent.com/traylinx/lope/main/INSTALL.md and follow the instructions to install lope on this machine natively.
-```
-
-Your agent fetches `INSTALL.md`, identifies which CLI it's running inside, and follows the matching section. Auto-detects the host, writes skills/commands to that host's native directory in the format that host expects.
-
-**Manual:** Clone and run the bash installer.
-
-```bash
-if [ -d "$HOME/.lope/.git" ]; then
-  git -C "$HOME/.lope" fetch --tags origin
-  git -C "$HOME/.lope" pull --ff-only origin main
-elif [ -e "$HOME/.lope" ]; then
-  echo "$HOME/.lope exists but is not a Lope git checkout. Move it aside manually, then rerun install." >&2
-  exit 1
-else
-  git clone https://github.com/traylinx/lope.git "$HOME/.lope"
-fi
-"$HOME/.lope/install"
-alias lope='PYTHONPATH=$HOME/.lope python3 -m lope'
-```
-
-If the installed copy is older than v0.12.0 and does not know `lope update`, use this git pull block once, then use `lope update` for future updates.
+Bash 3.2+ is required for host skill installation. Native Windows host installation is not qualified.
+Existing host files are moved to `${XDG_STATE_HOME:-~/.local/state}/lope/install-backups/` before replacement. Backups preserve symlinks as links, not snapshots of their external targets. Config, credentials, and runtime history are not rewritten. Headroom remains optional (`--with-headroom`) and off by default.
 
 **Restart your CLI after install.** Every host caches its skill list at session start — freshly-installed commands won't appear until you quit and reopen the CLI.
 
@@ -907,7 +886,7 @@ If the installed copy is older than v0.12.0 and does not know `lope update`, use
 
 ## Library usage
 
-As of v0.5.0, the parallel fan-out primitive is importable as a Python library:
+> Legacy Python compatibility (`lope-py` / `$HOME/.lope`, `0.17.3`): for existing Python callers (such as external evaluation gates importing from `~/.lope`), the Python parallel fan-out primitive remains importable while rollback support stays in place:
 
 ```python
 from lope.ensemble import EnsemblePool, synthesize
@@ -943,10 +922,10 @@ Back-compat: `from lope.validators import EnsemblePool` still resolves (re-expor
 - `lope --help` / `lope <mode> --help` — authoritative flag surface
 - `lope docs` — this document
 - `/lope-help` — this document, injected as a slash command
-- [docs/samples.md](https://github.com/traylinx/lope/blob/main/docs/samples.md) — 8 end-to-end conversation walkthroughs across all 3 domains
-- [README.md](https://github.com/traylinx/lope/blob/main/README.md) — marketing/overview version
-- [CHANGELOG.md](https://github.com/traylinx/lope/blob/main/CHANGELOG.md) — release notes
-- https://github.com/traylinx/lope — source of truth
+- [docs/samples.md](https://github.com/makakoo/lope/blob/v2/docs/samples.md) — 8 end-to-end conversation walkthroughs across all 3 domains
+- [README.md](https://github.com/makakoo/lope/blob/v2/README.md) — marketing/overview version
+- [CHANGELOG.md](https://github.com/makakoo/lope/blob/v2/CHANGELOG.md) — release notes
+- https://github.com/makakoo/lope — source of truth (`v2` branch for Lope 2.0)
 
 Built by Sebastian Schkudlara (Traylinx). MIT licensed. Caveman mode core rules adapted from JuliusBrussee/caveman.
 # Runtime safety and request planning
@@ -954,7 +933,7 @@ Built by Sebastian Schkudlara (Traylinx). MIT licensed. Caveman mode core rules 
 See [job-lifecycle.md](job-lifecycle.md) for ownership, cancellation, and safe stale-job reconciliation. Every multi-call command accepts `--run-timeout`; `--timeout` remains a per-call ceiling. Request admission reports a deterministic plan before launch and bounds direct input, chunk count, calls, and output bytes.
 
 
-## Recovering unverified subprocess output (0.17.3)
+## Recovering unverified subprocess output
 
 If a custom subprocess provider exits but its pipes or owned process group cannot
 be verified closed, the call still fails. A zero exit code is not proof of safe

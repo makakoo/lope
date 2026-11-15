@@ -153,13 +153,12 @@ Plan revision 2 (2026-11-07). Deliver a Rust `lope` that is a behavioural drop-i
 **Tests:**
 - `A17: ./scripts/cargo test -p lope-cli --test s8_cutover_parity && tools/parity/glimmer-baseline` (see detailed closeout plan in [`docs/sprints/S8B-remediation-and-cutover-closeout.md`](docs/sprints/S8B-remediation-and-cutover-closeout.md))
 
-### Phase 9B: s8b-remediation-and-cutover-closeout
+### Phase 9B: s8b-remediation-and-cutover-closeout (COMPLETED 2026-11-15)
 
-- Required before marking S7/S8 closed or evaluating S9 (`OQ-4`)
-- Fixes S7 parity defects (`CallContext.implementation = true` for writers, untrusted gate exit `3`, `execute --manual` non-TTY EOF exit `3`, `implement --interactive`, `negotiate` progress + `.feedback.md`/`.rounds/`, strict `golden_run`, `SelfHealer` wiring, `LOPE_FLOW_WORKERS`)
-- Fixes S8 hygiene (`install.rs` / `s8_cutover_parity.rs` hardcoded path removal, `FR39` Lope v2 `reference.md` + `docs.rs` shadowing fix)
-- Applies pending cross-repo patches (`PH-1` `~/.bashrc`, `PL-2`/`PL-3` `~/.lope`, `PG-1..PG-8` `makakoo-jungle`, `PM-2` `makakoo-os`, `PM-3` `MAKAKOO/AGENTS.md`) and executes `A17` + `M1–M8` benchmarks/live verification
-- `M8: scripts/bench-intel-mac.sh`
+- Fixed S7 parity defects (`CallContext.implementation = true` for writers, untrusted gate exit `3`, `execute --manual` non-TTY EOF exit `3`, `implement --interactive`, `negotiate` progress + `.feedback.md`/`.rounds/`, strict `golden_run` with zero `"ignore"` rules, `SelfHealer` wiring, `LOPE_FLOW_WORKERS`)
+- Fixed S8 hygiene (`install.rs` / `s8_cutover_parity.rs` hardcoded path removal, `FR39` Lope v2 `reference.md` + `docs.rs` shadowing fix, `capture-reference` baseline tag naming)
+- Applied host and cross-repo patches (`PH-1` `~/.bashrc`, `~/bin/lope`, `PL-2`/`PL-3` `~/.lope`, `PG-1..PG-8` `makakoo-jungle`, `PM-2` `makakoo-os`, `PM-3` `MAKAKOO/AGENTS.md`) and executed `A17` + `M1–M8` benchmarks/verification (`PM-1` stays deferred per `DEC-8`)
+- `M8: scripts/bench-version.py` + `/usr/bin/time -l` benchmark suite recorded in `docs/evidence/s8-cutover.txt`
 
 ### Phase 10: s9-pty-pool-and-daemon
 **Goal:** Only if OQ-4 approves on FR12 evidence: add the opt-in feature-gated Tier 3 warm PTY pool in `loped`, with Herdr detection plus the stabiliser, Lope-authored blocker rules, a peer-UID-checked socket and a launchd environment per NFR16.

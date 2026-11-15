@@ -13,12 +13,6 @@ When this skill is invoked, you (the agent) should:
    lope docs
    ```
 
-   Only for a verified Git checkout at `~/.lope`, if `lope` is not on `PATH`, use:
-
-   ```bash
-   PYTHONPATH=~/.lope python3 -m lope docs
-   ```
-
 2. **Load the output into your context.** Read the whole thing. It covers:
    - What lope is and what it isn't
    - The sprint modes (negotiate, execute, implement, audit)
@@ -35,8 +29,8 @@ When this skill is invoked, you (the agent) should:
 
 4. **If the user asks about something not in the reference**, say so explicitly and point them to:
    - `lope <mode> --help` for flags not covered
-   - https://github.com/traylinx/lope/blob/main/docs/samples.md for 8 end-to-end walkthroughs
-   - https://github.com/traylinx/lope/issues for bugs
+   - https://github.com/makakoo/lope/blob/v2/docs/samples.md for 8 end-to-end walkthroughs
+   - https://github.com/makakoo/lope/issues for bugs
 
 ## Why this skill exists
 

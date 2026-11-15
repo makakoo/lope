@@ -65,7 +65,7 @@ MASKS = [
 ]
 
 
-VOLATILE_INT_KEYS = {"pid", "pgid", "ppid", "pids", "rss_bytes"}
+VOLATILE_INT_KEYS = {"pid", "pgid", "ppid", "pids", "rss_bytes", "duration_ms"}
 
 
 def mask_json(value, key=None):
@@ -277,16 +277,41 @@ def compare(case, rust, py, default_route=None):
     want_route = case.get("route", default_route)
     if want_route and rust["route"] != want_route:
         problems.append("route: expected %s, rust took %s" % (want_route, rust["route"]))
-    ignore = set(case.get("ignore", []))
     if rust["exit"] != py["exit"]:
         problems.append("exit: rust=%s python=%s" % (rust["exit"], py["exit"]))
     for stream in ("stdout", "stderr"):
-        if stream in ignore:
+        if stream == "stdout" and case.get("stdout_contract") == "v2_docs":
+            if not py["stdout"].strip():
+                problems.append("python docs stdout unexpectedly empty")
+            txt = rust["stdout"]
+            if len(txt) < 10_000:
+                problems.append("v2 docs stdout too short (%d bytes)" % len(txt))
+            for heading in (
+                "# Lope — Complete Reference",
+                "## The modes",
+                "## CLI reference",
+                "## Environment variables",
+                "## Config precedence",
+                "## Install",
+                "## Hard rules for agents invoking lope",
+                "## Where to read more",
+            ):
+                if heading not in txt:
+                    problems.append("v2 docs missing section %r" % heading)
+            for forbidden in (
+                "Zero Python dependencies",
+                "traylinx/lope",
+                "PYTHONPATH=",
+                "python3 -m lope",
+                "super-lope",
+            ):
+                if forbidden.lower() in txt.lower():
+                    problems.append("v2 docs still contains forbidden %r" % forbidden)
             continue
         a, b = normalise_stream(stream, rust[stream]), normalise_stream(stream, py[stream])
         if a != b:
             problems.append("%s differs:\n%s" % (stream, unified(b, a)))
-    if "snapshot" not in ignore and rust["snapshot"] != py["snapshot"]:
+    if rust["snapshot"] != py["snapshot"]:
         problems.append("written state differs:\n%s" % unified(
             json.dumps(py["snapshot"], indent=1), json.dumps(rust["snapshot"], indent=1)))
     for k, v in case.get("expect", {}).items():

@@ -17,11 +17,20 @@ use std::path::{Path, PathBuf};
 use std::time::Instant;
 
 pub fn run(m: &ArgMatches) -> Native {
+    let _run_lock = match lope_state::runlock::acquire("execute") {
+        Ok(l) => l,
+        Err(busy) => {
+            eprint!("{}", busy.message);
+            return Native::Exit(lope_state::runlock::EXIT_TEMPFAIL);
+        }
+    };
     let Some(doc_path) = scope::os_str(m, "sprint_doc") else {
         eprintln!("lope execute: missing sprint_doc");
         return Native::Exit(2);
     };
-    let phase_filter = scope::os_str(m, "--phase");
+    let phase_filter = scope::u64_of(m, "--phase")
+        .map(|n| n.to_string())
+        .or_else(|| scope::os_str(m, "--phase"));
     let manual = scope::flag(m, "--manual");
     let use_gates = scope::flag(m, "--gates");
     let gate_config = scope::os_str(m, "--gate-config");
@@ -36,8 +45,11 @@ pub fn run(m: &ArgMatches) -> Native {
     };
     let mut doc = SprintDoc::from_markdown(&text, Some(&doc_path));
     if doc.phases.is_empty() {
-        eprintln!("lope execute: no phases found in {doc_path}");
-        return Native::Exit(1);
+        eprintln!(
+            "\nERROR: sprint doc at {doc_path} contains 0 phases.\n  \
+             Each phase must start with a level-3 heading: `### Phase N: <name>`"
+        );
+        return Native::Exit(2);
     }
     doc = match apply_phase_filter(&doc, phase_filter.as_deref()) {
         Ok(d) => d,
@@ -58,7 +70,7 @@ pub fn run(m: &ArgMatches) -> Native {
                         .collect();
                     if !ensure_gates_trusted(&pairs, Some(&cwd), trust) {
                         eprintln!("lope execute: gate commands not trusted (pass --trust)");
-                        return Native::Exit(2);
+                        return Native::Exit(3);
                     }
                 }
                 (specs, Some(cfg_path))
@@ -74,7 +86,10 @@ pub fn run(m: &ArgMatches) -> Native {
 
     let (cfg, pool) = match scope::resolve(m) {
         Ok(x) => x,
-        Err(e) => return Native::Delegate(format!("execute: {e}")),
+        Err(e) => {
+            drop(_run_lock);
+            return Native::Delegate(format!("execute: {e}"));
+        }
     };
 
     let sc = match scope::start("execute", &cfg, false) {
@@ -89,6 +104,10 @@ pub fn run(m: &ArgMatches) -> Native {
     let primary = pool.primary_validator();
     let executor = PhaseExecutor::new(pool.clone(), 3, timeout);
     let ctx_ref = &sc.ctx;
+    let mut writer_ctx = sc.ctx.clone();
+    writer_ctx.implementation = true;
+    let writer_ctx_ref = &writer_ctx;
+    let mut healer = lope_engine::healer::SelfHealer::new();
 
     let mut impl_fn = |phase: &Phase, fix_context: Option<&PhaseVerdict>| -> ImplementationResult {
         if manual {
@@ -108,7 +127,20 @@ pub fn run(m: &ArgMatches) -> Native {
             );
             let _ = io::stdout().flush();
             let mut line = String::new();
-            let _ = io::stdin().lock().read_line(&mut line);
+            match io::stdin().lock().read_line(&mut line) {
+                Ok(0) | Err(_) => {
+                    eprintln!(
+                        "\nERROR: --manual mode requires an interactive stdin. \
+                         Drop --manual to run autonomously via the primary validator."
+                    );
+                    return ImplementationResult {
+                        ok: false,
+                        error: "__manual_eof__".to_string(),
+                        ..Default::default()
+                    };
+                }
+                Ok(_) => {}
+            }
             if line.trim().eq_ignore_ascii_case("abort") {
                 return ImplementationResult {
                     ok: false,
@@ -143,7 +175,7 @@ pub fn run(m: &ArgMatches) -> Native {
             writer.as_ref(),
             &prompt,
             timeout,
-            Some(ctx_ref),
+            Some(writer_ctx_ref),
             Some("execute_impl"),
         ) {
             Ok(out) => ImplementationResult {
@@ -153,13 +185,70 @@ pub fn run(m: &ArgMatches) -> Native {
                 duration_seconds: t0.elapsed().as_secs_f64(),
                 ..Default::default()
             },
-            Err(e) => ImplementationResult {
-                ok: false,
-                error: e.to_string(),
-                writer: writer.name().to_string(),
-                duration_seconds: t0.elapsed().as_secs_f64(),
-                ..Default::default()
-            },
+            Err(e) => {
+                let err_msg = e.to_string();
+                if lope_providers::verdict::is_flag_error(&err_msg) {
+                    if let Some(healed) = lope_engine::healer::try_self_heal_for_validator(
+                        &mut healer,
+                        writer.as_ref(),
+                        &pool.validators,
+                        &err_msg,
+                        Some(writer_ctx_ref),
+                    ) {
+                        println!(
+                            ">>> self-heal succeeded, retrying phase {} with learned adapter",
+                            phase.index
+                        );
+                        match invoke_generate(
+                            healed.as_ref(),
+                            &prompt,
+                            timeout,
+                            Some(writer_ctx_ref),
+                            Some("execute_impl"),
+                        ) {
+                            Ok(out) => {
+                                return ImplementationResult {
+                                    ok: true,
+                                    summary: out,
+                                    writer: writer.name().to_string(),
+                                    duration_seconds: t0.elapsed().as_secs_f64(),
+                                    ..Default::default()
+                                };
+                            }
+                            Err(e2) => {
+                                return ImplementationResult {
+                                    ok: false,
+                                    error: format!(
+                                        "{} still failing after self-heal: {e2}",
+                                        writer.name()
+                                    ),
+                                    writer: writer.name().to_string(),
+                                    duration_seconds: t0.elapsed().as_secs_f64(),
+                                    ..Default::default()
+                                };
+                            }
+                        }
+                    }
+                    let head: String = err_msg.chars().take(400).collect();
+                    return ImplementationResult {
+                        ok: false,
+                        error: format!(
+                            "{} failed with a flag-surface error (upstream CLI likely renamed a flag):\n  {head}\nSet LOPE_SELF_HEAL=1 and re-run to attempt automatic adapter repair.",
+                            writer.name()
+                        ),
+                        writer: writer.name().to_string(),
+                        duration_seconds: t0.elapsed().as_secs_f64(),
+                        ..Default::default()
+                    };
+                }
+                ImplementationResult {
+                    ok: false,
+                    error: err_msg,
+                    writer: writer.name().to_string(),
+                    duration_seconds: t0.elapsed().as_secs_f64(),
+                    ..Default::default()
+                }
+            }
         }
     };
 
@@ -196,6 +285,9 @@ pub fn run(m: &ArgMatches) -> Native {
             Native::Exit(scope::finish(sc, 0))
         }
         Err(esc) => {
+            if esc.reason.contains("__manual_eof__") {
+                return Native::Exit(scope::finish(sc, 3));
+            }
             eprintln!(
                 "Execution escalated on Phase {} ({}): {}",
                 esc.phase_index, esc.phase_name, esc.reason

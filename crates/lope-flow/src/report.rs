@@ -1,11 +1,15 @@
 //! FlowReport + bridge to Auditor (`lope/flow/report.py`, Sprint S7, `FR36`).
 
 use crate::model::NodeResult;
+use lope_core::redaction::redact_text;
 use lope_engine::models::{
     EscalationRequired, ExecutionReport, Phase, PhaseVerdict, SprintDoc, VerdictStatus,
 };
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::fs;
+use std::io::Write;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone)]
 pub struct FlowReport {
@@ -125,11 +129,7 @@ pub fn flow_report_to_execution_report(fr: &FlowReport) -> ExecutionReport {
                     _ => VerdictStatus::Fail,
                 };
                 let mut pv = PhaseVerdict::new(status, &r.detail, r.duration_seconds, &r.label);
-                pv.confidence = if status == VerdictStatus::Pass {
-                    1.0
-                } else {
-                    0.0
-                };
+                pv.confidence = 0.0;
                 pv
             }
         };
@@ -150,7 +150,7 @@ pub fn flow_report_to_execution_report(fr: &FlowReport) -> ExecutionReport {
         sprint_doc: SprintDoc {
             title: format!("FLOW-{}", fr.graph_name),
             slug: fr.graph_name.clone(),
-            origin: String::new(),
+            origin: "lope flow run".to_string(),
             domain: "engineering".to_string(),
             path: None,
             phases,
@@ -160,8 +160,37 @@ pub fn flow_report_to_execution_report(fr: &FlowReport) -> ExecutionReport {
         error: fr
             .escalation
             .as_ref()
-            .map(|e| e.reason.clone())
+            .map(|e| e.to_string())
             .unwrap_or_default(),
         total_duration_seconds: fr.total_duration_seconds,
     }
+}
+
+pub fn write_flow_run(fr: &FlowReport, out_dir: &str) -> std::io::Result<PathBuf> {
+    let base = PathBuf::from(lope_core::paths::expanduser(out_dir));
+    fs::create_dir_all(&base)?;
+
+    let trace = base.join("trace.jsonl");
+    let mut tf = fs::File::create(&trace)?;
+    for r in &fr.node_results {
+        let detail: String = r.detail.chars().take(1000).collect();
+        let error: String = r.error.chars().take(500).collect();
+        let line = json!({
+            "node_id": r.node_id,
+            "outcome": r.outcome,
+            "label": r.label,
+            "detail": redact_text(&detail),
+            "duration_seconds": (r.duration_seconds * 100.0).round() / 100.0,
+            "error": redact_text(&error),
+            "model_calls": r.model_calls,
+        });
+        writeln!(tf, "{}", serde_json::to_string(&line).unwrap_or_default())?;
+    }
+
+    let report_md = base.join("report.md");
+    fs::write(
+        &report_md,
+        format!("# Flow run: {}\n\n```\n{}\n```\n", fr.graph_name, redact_text(&fr.scorecard())),
+    )?;
+    Ok(base)
 }

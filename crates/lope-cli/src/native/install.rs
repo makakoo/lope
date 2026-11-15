@@ -16,28 +16,21 @@ pub fn find_assets_root() -> Option<PathBuf> {
             return Some(p);
         }
     }
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(dir) = exe.parent() {
-            for cand in [
-                dir.to_path_buf(),
-                dir.join("../share/lope"),
-                dir.join("../../.."),
-            ] {
-                if has_install_script(&cand) {
-                    return Some(cand);
-                }
+    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
+        for cand in [
+            dir.clone(),
+            dir.join("../share/lope"),
+            dir.join("../../.."),
+            dir.join("../../../.."),
+        ] {
+            if has_install_script(&cand) {
+                return Some(cand);
             }
         }
     }
-    if let Some(home) = std::env::var_os("HOME") {
-        let p = PathBuf::from(home).join(".lope");
-        if has_install_script(&p) {
-            return Some(p);
-        }
-    }
-    let fallback = PathBuf::from("/Users/sebastian/.lope");
-    if has_install_script(&fallback) {
-        return Some(fallback);
+    let home_assets = lope_core::paths::lope_home();
+    if has_install_script(&home_assets) {
+        return Some(home_assets);
     }
     None
 }
@@ -45,7 +38,7 @@ pub fn find_assets_root() -> Option<PathBuf> {
 pub fn run(m: &ArgMatches) -> Native {
     let host = scope::os_str(m, "--host").unwrap_or_else(|| "all".to_string());
     let Some(assets) = find_assets_root() else {
-        eprintln!("lope install: cannot locate Lope skills/install assets");
+        eprintln!("lope install: cannot locate Lope skills/install assets (set LOPE_SOURCE_DIR)");
         return Native::Exit(1);
     };
     let script = assets.join("install");
@@ -55,7 +48,9 @@ pub fn run(m: &ArgMatches) -> Native {
         cmd.args(["--host", &host]);
     }
     cmd.env("LOPE_ENGINE_ROOT", &assets);
-    cmd.env("LOPE_PACKAGED_INSTALL", "0");
+    if std::env::var_os("LOPE_PACKAGED_INSTALL").is_none() {
+        cmd.env("LOPE_PACKAGED_INSTALL", "1");
+    }
     let py = std::env::var("LOPE_PYTHON").unwrap_or_else(|_| "python3".to_string());
     cmd.env("LOPE_PYTHON", py);
     match cmd.status() {

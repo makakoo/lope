@@ -16,17 +16,11 @@ Inject the authoritative lope reference into the current session and answer the 
 lope docs
 ```
 
-Only for a verified Git checkout at `~/.lope`, if `lope` is not on PATH, use:
-
-```bash
-PYTHONPATH=~/.lope python3 -m lope docs
-```
-
 2. Read the entire output. It's ~6K tokens and fits trivially. It covers every mode, flag, domain, env var, per-host install path, slash command vs natural language invocation, troubleshooting, and hard rules.
 
 3. Answer the user's question from the reference. Quote specific sections. Do NOT answer from memory — memory drifts across versions.
 
-4. If the user asks about something not covered, say so and point them at `lope <mode> --help` or https://github.com/traylinx/lope/issues.
+4. If the user asks about something not covered, say so and point them at `lope <mode> --help` or https://github.com/makakoo/lope/issues.
 
 ## Do not
 

@@ -47,6 +47,9 @@ pub trait Validator: Send + Sync {
     fn execution_profile(&self, _mode: &str) -> Option<Value> {
         None
     }
+    fn command_template(&self) -> Vec<String> {
+        vec![self.name().to_string()]
+    }
 }
 
 pub fn respect_provider_timeout() -> bool {
@@ -438,6 +441,9 @@ impl Validator for Subprocess {
     }
     fn timeout_override(&self) -> Option<i64> {
         self.timeout_override
+    }
+    fn command_template(&self) -> Vec<String> {
+        self.command.clone()
     }
     fn execution_profile(&self, mode: &str) -> Option<Value> {
         let review = mode == "review";
@@ -855,6 +861,9 @@ impl Validator for Http {
     }
     fn timeout_override(&self) -> Option<i64> {
         self.timeout_override
+    }
+    fn command_template(&self) -> Vec<String> {
+        Vec::new()
     }
     fn generate(&self, prompt: &str, timeout: f64, _ctx: Option<&Context>) -> Result<String, ProviderError> {
         let prompt = match &self.prompt_wrapper {

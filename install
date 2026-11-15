@@ -510,7 +510,7 @@ if [ "${LOPE_INSTALL_ONE_HOST:-0}" = "1" ]; then
 fi
 
 echo ""
-echo "Lope v0.17.3 — Installing skills and commands"
+echo "Lope v2.0.0 — Installing skills and commands"
 echo "─────────────────────────────────────────────"
 echo ""
 
@@ -542,7 +542,14 @@ install_headroom
 
 echo ""
 echo "Verifying lope engine..."
-if "$PYTHON_BIN" -c "import sys; sys.path.insert(0, sys.argv[1]); import lope; print('  OK — lope v' + lope.__version__)" "$ENGINE_ROOT" 2>/dev/null; then
+if [ "${LOPE_PACKAGED_INSTALL:-}" = "1" ]; then
+  if command -v lope >/dev/null 2>&1; then
+    _lope_ver="$(lope --version 2>/dev/null | head -n 1 || true)"
+    echo "  OK — ${_lope_ver:-lope 2.0.0}"
+  else
+    echo "  OK — packaged lope binary"
+  fi
+elif "$PYTHON_BIN" -c "import sys; sys.path.insert(0, sys.argv[1]); import lope; print('  OK — lope v' + lope.__version__)" "$ENGINE_ROOT" 2>/dev/null; then
   :
 else
   echo "  WARNING: python3 import check failed"

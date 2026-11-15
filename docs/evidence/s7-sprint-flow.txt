@@ -1,32 +1,46 @@
-Sprint S7 — Sprint Engine, Gates, Audit, Implement, Healer & Flow Graphs
-=========================================================================
+S7 Sprint / Flow Native Execution & S8B Parity Evidence (2026-11-15)
+====================================================================
 
-Implemented modules:
-- lope-engine:
-  - models.rs (SprintDoc, Phase, domain_config, Round, Proposal, ExecutionReport, EscalationRequired)
-  - trust.rs (trusted_gates.json, LOPE_TRUST_GATES / LOPE_YES_RUN_PROJECT_COMMANDS, ensure_gates_trusted)
-  - journal.rs (journal.jsonl append/read)
-  - auditor.rs (scorecard + $LOPE_HOME/journal/YYYY_MM_DD.md writer)
-  - gates.rs (.lope/rules.json, .lope/gate-baseline.json, setsid+killpg gate runner, compare_results)
-  - pool_validate.rs (ValidatorPool fallback + EnsemblePool majority vote + verdict_repair + evidence gate)
-  - healer.rs (SelfHealer with LOPE_SELF_HEAL, 90-day TTL, smoke test, LearnedAdapter persistence)
-  - negotiator.rs (propose, lint, refine, converge loop)
-  - executor.rs (PhaseExecutor two-stage spec+quality validation, LOPE_SINGLE_STAGE, gate integration)
-  - implement.rs (ImplementRoster, apply_phase_filter, build_swarm_prompt, render_dry_run, workspace_snapshot, invoke_writer_failover, run_implement)
-- lope-flow:
-  - model.rs, dot.rs (@file path confinement), stylesheet.rs, validate.rs, templates.rs, render.rs, report.rs, runner.rs (wave BFS, join barriers, loop_restart, retry, max_visits/max_model_calls bounds)
-- lope-cli & lope-compat:
-  - Native handlers: gate.rs (gate save/check, check), audit.rs, negotiate.rs, execute.rs, implement.rs, flow.rs
-  - Coverage table updated for S7 verbs: negotiate, execute, implement, audit, gate, check, flow.
+Scope
+-----
+Native Rust S7 sprint/flow/escalation execution, S8B golden-run parity (zero "ignore" hacks), and workspace test suite verification on `v2` (`makakoo/lope`).
 
-Verification:
-- `./scripts/cargo test -p lope-compat -p lope-engine -p lope-flow`:
-  - lope-compat: 22/22 passed
-  - lope-engine: 12/12 unit + 4/4 s4_engine passed
-  - lope-flow: 3/3 unit passed
-- `./scripts/cargo test -p lope-cli --bins --test s7_sprint_flow_parity`:
-  - every_covered_path_has_an_implementation: passed
-  - s7_cli_surface_and_a11_a15_a16: passed (A11 G7/G8 trust & baseline, A15 audit/sprint, A16 flow validate/render/list)
-  - s7_golden_parity_matches_python: passed (5/5 golden_run cases identical against Python Lope)
-- `./scripts/cargo test --workspace`:
-  - Passed 100% across all workspace crates (exit 0), including `delegation_fidelity` (27/27), `router_cli` (8/8), `s1_native_parity`, `s3_team_parity`, `s4_fanout_parity`, `s6_deliberate_parity`, `s7_sprint_flow_parity` (2/2), `lope-compat` (22/22), `lope-core` (10/10), `lope-engine` (12/12 + 4/4), `lope-flow` (3/3), `lope-makakoo` (3/3), `lope-memory` (2/2), `lope-providers` (1/1 + 9/9), `lope-runtime` (1/1 + 5/5), `lope-state` (3/3 + 1/1).
+1. Cargo Workspace Test Suite (`./scripts/cargo test --workspace`)
+------------------------------------------------------------------
+- `lope-cli` bin unit: 2 passed, 0 failed (`every_covered_path_has_an_implementation`, `escalation_artifacts_write_proposal_feedback_and_rounds`)
+- `lope-cli` integration tests:
+  - `delegation_fidelity`: 1 passed
+  - `router_cli`: 8 passed
+  - `s1_native_parity`: 1 passed
+  - `s3_team_parity`: 1 passed
+  - `s4_fanout_parity`: 1 passed
+  - `s6_deliberate_parity`: 1 passed
+  - `s7_sprint_flow_parity`: 5 passed
+  - `s8_cutover_parity`: 1 passed
+- Workspace crates:
+  - `lope_compat`: 22 passed
+  - `lope_core`: 10 unit + 1 `config_python_roundtrip` passed
+  - `lope_engine`: 17 unit + 4 `s4_engine` passed
+  - `lope_flow`: 4 passed
+  - `lope_makakoo`: 0 unit + 3 `s5_makakoo` passed
+  - `lope_memory`: 2 passed
+  - `lope_providers`: 1 unit + 9 `s3_providers` passed
+  - `lope_runtime`: 1 unit + 3 `completion_policy` + 1 `escaped_pipe_holder` + 1 `timeout_diagnostics` passed
+  - `lope_state`: 3 unit + 1 `registry_python_interop` passed
+- Total result: 100% pass, 0 failed, 0 ignored.
+
+2. CLI Schema Parity (`tools/parity/dump-python && tools/parity/dump-rust && tools/parity/diff`)
+------------------------------------------------------------------------------------------------
+- `compared 48 commands, 347 arguments` -> `PASS (0 differences, 0 allow-listed)`
+
+3. Golden Corpus Parity (`/usr/bin/python3 -I tools/parity/golden_run.py --lope /usr/local/bin/lope`)
+-----------------------------------------------------------------------------------------------------
+- `s0-delegation`: 27/27 identical
+- `s1-native`: 24/24 identical
+- `s3-team`: 32/32 identical
+- `s4-ask`: 27/27 identical
+- `s4-memory`: 19/19 identical
+- `s4-review-fanout`: 21/21 identical
+- `s6-deliberate`: 11/11 identical
+- `s7-sprint-flow`: 16/16 identical
+- Total: 177/177 identical across all 8 corpus files, with zero "ignore" normalizations.

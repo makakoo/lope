@@ -16,7 +16,7 @@ pub use model::{
     NodeResult,
 };
 pub use render::{has_dot, render_file, to_canonical_dot};
-pub use report::{flow_report_to_execution_report, FlowReport};
+pub use report::{flow_report_to_execution_report, write_flow_run, FlowReport};
 pub use runner::FlowRunner;
 pub use stylesheet::{parse_stylesheet, split_names, StyleRule, Stylesheet};
 pub use templates::{get_template, template_names};

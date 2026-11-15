@@ -6,15 +6,18 @@ use std::path::PathBuf;
 
 const EMBEDDED_REFERENCE: &str = include_str!("../../assets/reference.md");
 
+fn non_empty_env(name: &str) -> Option<String> {
+    std::env::var(name).ok().filter(|v| !v.trim().is_empty())
+}
+
 fn find_reference_md() -> Option<String> {
-    if let Ok(src) = std::env::var("LOPE_SOURCE_DIR") {
-        let p = PathBuf::from(src).join("docs/reference.md");
-        if let Ok(text) = fs::read_to_string(p) {
+    if let Some(path) = non_empty_env("LOPE_DOCS_PATH") {
+        if let Ok(text) = fs::read_to_string(path) {
             return Some(text);
         }
     }
-    if let Some(home) = std::env::var_os("HOME") {
-        let p = PathBuf::from(home).join(".lope/docs/reference.md");
+    if let Some(src) = non_empty_env("LOPE_SOURCE_DIR") {
+        let p = PathBuf::from(src).join("docs/reference.md");
         if let Ok(text) = fs::read_to_string(p) {
             return Some(text);
         }

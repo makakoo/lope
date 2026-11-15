@@ -112,10 +112,8 @@ Lope is already a CLI. If the user says "use lope to do X", you invoke `lope <mo
 lope status      # what validators are detected?
 lope configure   # pick which ones to use
 lope version     # show version + lion-face banner
-lope update      # self-update Git/package install and refresh host skills
+lope update      # self-update Lope and refresh host skills
 lope update --dry-run  # preview update commands without changing files
 ```
 
-Only for a verified Git install at `~/.lope`, if `lope` isn't on PATH, prefix commands with `PYTHONPATH=~/.lope python3 -m lope` or tell the user to add `alias lope='PYTHONPATH=~/.lope python3 -m lope'` to their shell rc.
-
-Git installs use fetch plus fast-forward pull; virtualenv package installs use pip. `lope update` then refreshes host skills, preserving replaced host files in a dated backup directory. For pipx use `pipx upgrade lope-agent`, then `lope install`. `lope docs` reads the matching version's reference. Preserve local modifications before any update.
+Ensure the native `lope` binary is on `PATH` (for example `/usr/local/bin/lope`). Preserve local modifications before any update. `lope docs` prints the matching version's reference.

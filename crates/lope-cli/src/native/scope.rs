@@ -69,6 +69,19 @@ pub fn resolve(m: &ArgMatches) -> Result<(LopeCfg, Pool), String> {
     Ok((cfg, pool))
 }
 
+/// `_ensure_gate_runtime` (`cli.py`): layered config (only `run_timeout` and
+/// `allow_unbounded_run` overrides) + `start`, without `_command_runtime_scope`.
+pub fn start_gate_runtime(mode: &str, m: &ArgMatches) -> Result<Scope, String> {
+    let mut o = CliOverrides::default();
+    o.run_timeout = u64_of(m, "--run-timeout");
+    if flag(m, "--allow-unbounded-run") {
+        o.allow_unbounded_run = Some(true);
+    }
+    let cwd = std::env::current_dir().unwrap_or_default();
+    let cfg = config::load_layered(&cwd, &|k| std::env::var(k).ok(), &o);
+    start(mode, &cfg, true)
+}
+
 pub struct Scope {
     pub ctx: Context,
     pub registry: Arc<RunRegistry>,

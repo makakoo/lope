@@ -30,6 +30,87 @@
    "files": {
     "c.dot": "digraph c {\n  Start [type=\"start\"]\n  A [type=\"script\", cmd=\"echo ok\"]\n  Exit [type=\"exit\"]\n  Start -> A -> Exit\n}\n"
    }
+  },
+  {
+   "name": "check-json-trust",
+   "argv": ["check", "--trust", "--json"],
+   "files": {
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"score\",\"cmd\":\"echo score=10\",\"type\":\"regex_number\",\"regex\":\"score=(\\\\d+)\",\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "check-untrusted-exit3",
+   "argv": ["check", "--json"],
+   "files": {
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"ok\",\"cmd\":\"echo ok\",\"type\":\"exit\",\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "gate-save",
+   "argv": ["gate", "save", "--trust", "--json"],
+   "files": {
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"score\",\"cmd\":\"echo score=10\",\"type\":\"regex_number\",\"regex\":\"score=(\\\\d+)\",\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "gate-check",
+   "setup_py": "import sys, subprocess; subprocess.run([sys.executable, '-m', 'lope', 'gate', 'save', '--trust', '--json'], check=True)",
+   "argv": ["gate", "check", "--trust", "--json"],
+   "files": {
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"score\",\"cmd\":\"echo score=10\",\"type\":\"regex_number\",\"regex\":\"score=(\\\\d+)\",\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "gate-check-text",
+   "setup_py": "import sys, subprocess; subprocess.run([sys.executable, '-m', 'lope', 'gate', 'save', '--trust'], check=True)",
+   "argv": ["gate", "check", "--trust"],
+   "files": {
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"score\",\"cmd\":\"echo score=10\",\"type\":\"regex_number\",\"regex\":\"score=(\\\\d+)\",\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "implement-dry-run",
+   "argv": ["implement", "SPRINT.md", "--agents", "mock-a", "--escalate-to", "mock-b", "--dry-run"],
+   "files": {
+    "SPRINT.md": "# SPRINT-X\n\n## Origin\nX\n\n## Phases\n\n### Phase 1: p1\n**Goal:** G\n"
+   }
+  },
+  {
+   "name": "implement-phase-missing",
+   "argv": ["implement", "SPRINT.md", "--phase", "99", "--agents", "mock-a", "--escalate-to", "mock-b"],
+   "files": {
+    "SPRINT.md": "# SPRINT-X\n\n## Origin\nX\n\n## Phases\n\n### Phase 1: p1\n**Goal:** G\n"
+   }
+  },
+  {
+   "name": "flow-run-script",
+   "argv": ["flow", "run", "wf.dot", "--task", "smoke", "--no-journal"],
+   "files": {
+    "wf.dot": "digraph demo {\n  Start [type=\"start\"]\n  Gate [type=\"script\", cmd=\"echo hello-flow\"]\n  Exit [type=\"exit\"]\n  Start -> Gate -> Exit\n}\n"
+   }
+  },
+  {
+   "name": "gate-check-fail",
+   "setup_py": "import pathlib, sys, subprocess; subprocess.run([sys.executable, '-m', 'lope', 'gate', 'save', '--trust', '--json'], check=True); pathlib.Path('score.txt').write_text('5\\n')",
+   "argv": ["gate", "check", "--trust", "--json"],
+   "files": {
+    "score.txt": "10\n",
+    ".lope/rules.json": "{\"gates\":[{\"name\":\"score\",\"cmd\":\"echo score=$(cat score.txt)\",\"type\":\"regex_number\",\"regex\":\"score=(\\\\d+)\",\"max_delta_drop\":0,\"required\":true}]}\n"
+   }
+  },
+  {
+   "name": "audit-incomplete",
+   "argv": ["audit", "SPRINT.md", "--no-journal"],
+   "files": {
+    "SPRINT.md": "# SPRINT-X\n\n## Origin\nX\n\n## Phases\n\n### Phase 1: p1\n**Goal:** G\n"
+   }
+  },
+  {
+   "name": "audit-pass",
+   "argv": ["audit", "SPRINT.md"],
+   "files": {
+    "SPRINT.md": "# SPRINT-X\n\n## Origin\nX\n\n## Phases\n\n### Phase 1: p1 (PASS, 0.90)\n**Goal:** G\n"
+   }
   }
  ]
 }

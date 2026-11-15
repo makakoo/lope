@@ -18,11 +18,16 @@ pub fn lope_home_from(lope_home: Option<OsString>, home: Option<OsString>) -> Pa
 }
 
 /// Python's `Path.expanduser()` for the current user (`~` and `~/...` only).
-fn expand_user(path: PathBuf, home: &std::path::Path) -> PathBuf {
+pub fn expand_user(path: PathBuf, home: &std::path::Path) -> PathBuf {
     match path.strip_prefix("~") {
         Ok(rest) => home.join(rest),
         Err(_) => path,
     }
+}
+
+/// Expand a leading `~` or `~/...` path using `$HOME` / passwd fallback.
+pub fn expanduser(raw: &str) -> PathBuf {
+    expand_user(PathBuf::from(raw), &home_dir())
 }
 
 /// `os.environ.get("LOPE_HOME", os.path.expanduser("~/.lope"))`: the form

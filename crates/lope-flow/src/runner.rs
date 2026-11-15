@@ -17,10 +17,42 @@ use lope_providers::pool::Pool;
 use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead, Write};
 use std::path::PathBuf;
-use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 pub const DEFAULT_TIMEOUT_SECONDS: f64 = 960.0;
+pub const DEFAULT_MAX_WORKERS: usize = 5;
+
+fn flow_max_workers() -> usize {
+    match std::env::var("LOPE_FLOW_WORKERS") {
+        Ok(raw) if !raw.trim().is_empty() => raw
+            .trim()
+            .parse::<usize>()
+            .map(|n| n.max(1))
+            .unwrap_or(DEFAULT_MAX_WORKERS),
+        _ => DEFAULT_MAX_WORKERS,
+    }
+}
+
+fn print_flow_step(node: &FlowNode, result: &NodeResult) {
+    let mark = match result.outcome.as_str() {
+        "succeeded" | "passed" | "started" | "exited" => "✓",
+        "failed" | "needs_fix" | "infra_error" => "✗",
+        _ => "•",
+    };
+    let mut line = format!(
+        ">>> {} [{}] → {} {mark}",
+        node.id,
+        node.kind.as_str(),
+        result.outcome
+    );
+    if !result.error.is_empty() {
+        let head: String = result.error.chars().take(80).collect();
+        line.push_str(&format!("  ({head})"));
+    }
+    println!("{line}");
+}
 
 pub const VERDICT_INSTRUCTIONS: &str = "\n\nReply with a verdict block in EXACTLY this format. The literal ---VERDICT--- and ---END--- delimiter lines are REQUIRED:\n---VERDICT---\nstatus: PASS | NEEDS_FIX | FAIL\nconfidence: 0.0-1.0\nrationale: 1-3 sentences, terse; cite file:line where relevant\nrequired_fixes:\n  - fix 1   (include this section only when NEEDS_FIX or FAIL)\n---END---";
 
@@ -115,11 +147,15 @@ fn handle_agent(node: &FlowNode, ctx: &FlowContext) -> NodeResult {
     }
     let timeout = resolve_timeout(node, ctx);
     let stage = format!("flow:{}", node.id);
+    let mut writer_ctx = ctx.invocation_context.as_deref().cloned();
+    if let Some(ref mut c) = writer_ctx {
+        c.implementation = true;
+    }
     match invoke_generate(
         validator.as_ref(),
         &prompt,
         timeout,
-        ctx.invocation_context.as_deref(),
+        writer_ctx.as_ref(),
         Some(&stage),
     ) {
         Ok(out) => {
@@ -492,9 +528,9 @@ impl FlowRunner {
             for (node, result) in &wave_results {
                 report.model_calls += result.model_calls;
                 ctx.blackboard.put_result(result);
+                print_flow_step(node, result);
                 global_visits += result.attempts.saturating_sub(1);
                 report.node_results.push(result.clone());
-                let _ = node;
             }
 
             if report.model_calls > self.max_model_calls {
@@ -614,27 +650,56 @@ impl FlowRunner {
         if nodes.is_empty() {
             return Vec::new();
         }
-        if nodes.len() == 1 {
-            return vec![(nodes[0].clone(), self.run_node_guarded(&nodes[0], ctx))];
-        }
-        std::thread::scope(|s| {
-            let handles: Vec<_> = nodes
+        let workers = flow_max_workers().min(nodes.len());
+        if workers <= 1 || nodes.len() == 1 {
+            return nodes
                 .iter()
-                .map(|n| s.spawn(move || (n.clone(), self.run_node_guarded(n, ctx))))
+                .map(|n| (n.clone(), self.run_node_guarded(n, ctx)))
                 .collect();
-            handles
-                .into_iter()
-                .enumerate()
-                .map(|(i, h)| match h.join() {
-                    Ok(pair) => pair,
-                    Err(_) => {
-                        let mut r = NodeResult::simple(&nodes[i].id, "infra_error");
-                        r.error = "worker thread panicked".to_string();
-                        (nodes[i].clone(), r)
+        }
+        let next_idx = AtomicUsize::new(0);
+        let slots: Vec<Mutex<Option<NodeResult>>> =
+            (0..nodes.len()).map(|_| Mutex::new(None)).collect();
+        std::thread::scope(|s| {
+            let mut handles = Vec::with_capacity(workers);
+            for _ in 0..workers {
+                let next_idx = &next_idx;
+                let slots = &slots;
+                handles.push(s.spawn(move || loop {
+                    let idx = next_idx.fetch_add(1, Ordering::Relaxed);
+                    if idx >= nodes.len() {
+                        break;
                     }
-                })
-                .collect()
-        })
+                    let node = &nodes[idx];
+                    let res = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        self.run_node_guarded(node, ctx)
+                    })) {
+                        Ok(r) => r,
+                        Err(_) => {
+                            let mut r = NodeResult::simple(&node.id, "infra_error");
+                            r.error = "worker thread panicked".to_string();
+                            r
+                        }
+                    };
+                    *slots[idx].lock().unwrap() = Some(res);
+                }));
+            }
+            for h in handles {
+                let _ = h.join();
+            }
+        });
+        slots
+            .into_iter()
+            .enumerate()
+            .map(|(i, slot)| {
+                let res = slot.into_inner().unwrap().unwrap_or_else(|| {
+                    let mut r = NodeResult::simple(&nodes[i].id, "infra_error");
+                    r.error = "worker thread panicked".to_string();
+                    r
+                });
+                (nodes[i].clone(), res)
+            })
+            .collect()
     }
 
     fn run_node_guarded(&self, node: &FlowNode, ctx: &FlowContext) -> NodeResult {
@@ -753,5 +818,95 @@ mod tests {
         }
         "#;
         assert!(parse_dot(escape, Some(dir.path())).is_err());
+    }
+
+    #[test]
+    fn flow_workers_cap_and_default_visit_cap() {
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = LOCK.lock().unwrap();
+
+        // 1. Default visit cap matches Python max(50, 8 * len(nodes)).
+        let g10 = parse_dot(
+            r#"digraph big {
+                Start [ type="start" ]
+                N1 [ type="script", cmd="echo 1" ]
+                N2 [ type="script", cmd="echo 2" ]
+                N3 [ type="script", cmd="echo 3" ]
+                N4 [ type="script", cmd="echo 4" ]
+                N5 [ type="script", cmd="echo 5" ]
+                N6 [ type="script", cmd="echo 6" ]
+                N7 [ type="script", cmd="echo 7" ]
+                N8 [ type="script", cmd="echo 8" ]
+                Exit [ type="exit" ]
+                Start -> N1 -> N2 -> N3 -> N4 -> N5 -> N6 -> N7 -> N8 -> Exit
+            }"#,
+            None,
+        )
+        .unwrap();
+        assert_eq!(g10.nodes.len(), 10);
+        assert_eq!(g10.max_node_visits().unwrap(), 80);
+        let cfg = LopeCfg::defaults();
+        let fc = crate::validate::forecast_graph(&g10, &[], &cfg);
+        assert_eq!(fc["max_node_visits"].as_u64(), Some(80));
+
+        // 2. LOPE_FLOW_WORKERS caps concurrent wave execution cleanly while preserving wave order.
+        let prev = std::env::var("LOPE_FLOW_WORKERS").ok();
+        let empty_pool = || Pool {
+            validators: Vec::new(),
+            primary: String::new(),
+            parallel: false,
+            ensemble: false,
+            unsupported: Vec::new(),
+            warnings: Vec::new(),
+        };
+
+        for (limit, max_expected) in [(2usize, 2usize), (1usize, 1usize)] {
+            let dir = tempfile::tempdir().unwrap();
+            let active = dir.path().join("active");
+            let counts = dir.path().join("counts");
+            std::fs::create_dir_all(&active).unwrap();
+            std::fs::create_dir_all(&counts).unwrap();
+
+            let branch = |name: &str| {
+                let d = active.join(name);
+                let c = counts.join(name);
+                format!(
+                    r#"{name} [ type="script", cmd="mkdir \"{}\" && ls -1 \"{}\" | wc -l > \"{}\" && sleep 0.1 && rmdir \"{}\"" ]"#,
+                    d.display(),
+                    active.display(),
+                    c.display(),
+                    d.display(),
+                )
+            };
+            let dot = format!(
+                "digraph cap {{\n  Start [ type=\"start\" ]\n  {}\n  {}\n  {}\n  {}\n  Join [ type=\"script\", join=\"true\", cmd=\"echo joined\" ]\n  Exit [ type=\"exit\" ]\n  Start -> A\n  Start -> B\n  Start -> C\n  Start -> D\n  A -> Join\n  B -> Join\n  C -> Join\n  D -> Join\n  Join -> Exit\n}}",
+                branch("A"),
+                branch("B"),
+                branch("C"),
+                branch("D"),
+            );
+            let g = parse_dot(&dot, None).unwrap();
+            std::env::set_var("LOPE_FLOW_WORKERS", limit.to_string());
+            let runner = FlowRunner::new(g, empty_pool(), LopeCfg::defaults(), None, None).unwrap();
+            let report = runner.run("cap").unwrap();
+            assert!(report.ok);
+            assert_eq!(
+                report.path(),
+                vec!["Start", "A", "B", "C", "D", "Join", "Exit"]
+            );
+            for name in ["A", "B", "C", "D"] {
+                let txt = std::fs::read_to_string(counts.join(name)).unwrap();
+                let seen: usize = txt.trim().parse().unwrap();
+                assert!(
+                    seen >= 1 && seen <= max_expected,
+                    "LOPE_FLOW_WORKERS={limit}: node {name} observed {seen} active workers"
+                );
+            }
+        }
+
+        match prev {
+            Some(v) => std::env::set_var("LOPE_FLOW_WORKERS", v),
+            None => std::env::remove_var("LOPE_FLOW_WORKERS"),
+        }
     }
 }

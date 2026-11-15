@@ -4,17 +4,42 @@
 pub use crate::models::{PhaseVerdict, ValidatorResult, VerdictStatus};
 pub use parse_verdict as parse_opencode_verdict;
 
+pub fn is_flag_error(stderr: &str) -> bool {
+    if stderr.is_empty() {
+        return false;
+    }
+    static PATS: OnceLock<Vec<Regex>> = OnceLock::new();
+    let pats = PATS.get_or_init(|| {
+        vec![
+            re(r"(?i)\bunrecognized\s+arguments?\b"),
+            re(r"(?i)\bunknown\s+(?:option|argument|flag)\b"),
+            re(r"(?i)\bunexpected\s+argument\b"),
+            re(r"(?i)\bno\s+such\s+option\b"),
+            re(r"(?i)\binvalid\s+(?:option|flag|argument)\b"),
+            re(r"(?im)^usage:\s"),
+            re(r"(?i)\berror:\s+(?:unrecognized|unknown)\b"),
+        ]
+    });
+    let head: String = stderr.chars().take(2000).collect();
+    pats.iter().any(|rx| is_match(rx, &head))
+}
+
 pub fn infra_error(
     validator_name: &str,
     error_msg: &str,
     duration: f64,
 ) -> ValidatorResult {
+    let flag_error_hint = if is_flag_error(error_msg) {
+        error_msg.chars().take(2000).collect()
+    } else {
+        String::new()
+    };
     ValidatorResult {
         validator_name: validator_name.to_string(),
         verdict: PhaseVerdict::new(VerdictStatus::InfraError, error_msg, duration, validator_name),
         raw_response: String::new(),
         error: error_msg.to_string(),
-        flag_error_hint: String::new(),
+        flag_error_hint,
         repair_attempted: false,
         repair_status: None,
         repaired_response: String::new(),

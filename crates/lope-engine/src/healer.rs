@@ -9,8 +9,10 @@ use regex::Regex;
 use serde_json::json;
 use std::collections::HashSet;
 use std::process::{Command, Stdio};
-use std::sync::OnceLock;
+use std::sync::{Arc, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
+
+use lope_providers::verdict::is_flag_error;
 
 pub const SMOKE_PROMPT: &str = "Reply with the single word OK and nothing else.";
 pub const SMOKE_EXPECTED: &str = "OK";
@@ -370,9 +372,63 @@ pub fn is_adapter_expired(adapter: &LearnedAdapter, now: Option<f64>) -> bool {
     (now - adapter.timestamp) > LEARNED_ADAPTER_TTL_SECONDS
 }
 
+pub fn build_healed_validator(
+    cli_name: &str,
+    adapter: &LearnedAdapter,
+) -> Option<Arc<dyn Validator>> {
+    let stdin = adapter.stdin_mode.as_str() == Some("pipe");
+    lope_providers::generic::Subprocess::from_config(&json!({
+        "name": cli_name,
+        "type": "subprocess",
+        "command": adapter.argv_template,
+        "stdin": stdin,
+    }))
+    .ok()
+    .map(|s| Arc::new(s) as Arc<dyn Validator>)
+}
+
+/// Detect flag-surface errors and coordinate one SelfHealer attempt + adapter build.
+pub fn try_self_heal_for_validator(
+    healer: &mut SelfHealer,
+    target: &dyn Validator,
+    candidates: &[Arc<dyn Validator>],
+    err_msg: &str,
+    ctx: Option<&Context>,
+) -> Option<Arc<dyn Validator>> {
+    if !is_flag_error(err_msg) {
+        return None;
+    }
+    let reviewer = candidates
+        .iter()
+        .find(|v| v.name() != target.name() && v.available())?;
+    let remaining = ctx.and_then(|c| c.budget.deadline.map(|_| c.budget.remaining(false)));
+    if !healer.should_attempt(target.name(), true, remaining) {
+        return None;
+    }
+    let old_argv = target.command_template();
+    let cli_binary = old_argv
+        .first()
+        .map(String::as_str)
+        .unwrap_or_else(|| target.name());
+    let adapter = healer.attempt(
+        target.name(),
+        cli_binary,
+        &old_argv,
+        err_msg,
+        reviewer.as_ref(),
+        ctx,
+    )?;
+    build_healed_validator(target.name(), &adapter)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use lope_providers::errors::ProviderError;
+    use std::fs;
+    use std::os::unix::fs::PermissionsExt;
+    use std::path::PathBuf;
+    use tempfile::tempdir;
 
     #[test]
     fn parse_heal_response_fenced() {
@@ -383,5 +439,168 @@ mod tests {
             extract_json_path(r#"{"result":{"text":"OK"}}"#, "result.text"),
             Some("OK".to_string())
         );
+    }
+
+    struct MockReviewer {
+        name: String,
+        reply: String,
+    }
+
+    impl Validator for MockReviewer {
+        fn name(&self) -> &str {
+            &self.name
+        }
+        fn available(&self) -> bool {
+            true
+        }
+        fn generate(
+            &self,
+            _prompt: &str,
+            _timeout: f64,
+            _ctx: Option<&Context>,
+        ) -> Result<String, ProviderError> {
+            Ok(self.reply.clone())
+        }
+        fn transport(&self) -> &'static str {
+            "argv"
+        }
+    }
+
+    #[test]
+    fn self_heal_end_to_end_persists_learned_adapter_and_logs_journal() {
+        // Test environment mutation safety: serialize tests touching LOPE_HOME/LOPE_SELF_HEAL.
+        static LOCK: std::sync::Mutex<()> = std::sync::Mutex::new(());
+        let _guard = LOCK.lock().unwrap();
+
+        let dir = tempdir().unwrap();
+        let lope_home = dir.path().join("lope-home");
+        fs::create_dir_all(&lope_home).unwrap();
+        fs::write(
+            lope_home.join("config.json"),
+            r#"{"version":1,"validators":["broken","claude"],"primary":"broken","timeout":30,"parallel":false,"providers":[]}"#,
+        )
+        .unwrap();
+
+        // Mock CLI: `--help` prints new flag `--ask`; `--bad-flag` exits 2 with unrecognized option;
+        // `--ask <prompt>` prints prompt-derived output (OK for smoke, PASS verdict for validate).
+        let bin = dir.path().join("broken-cli");
+        let script = r#"#!/bin/sh
+if [ "$1" = "--help" ]; then
+  echo "Usage: broken-cli --ask <prompt>"
+  exit 0
+fi
+if [ "$1" = "--bad-flag" ]; then
+  echo "error: unrecognized argument '--bad-flag'" >&2
+  exit 2
+fi
+if [ "$1" = "--ask" ]; then
+  case "$2" in
+    *"Reply with the single word OK"*) echo "OK" ;;
+    *) printf -- "---VERDICT---\nstatus: PASS\nconfidence: 0.95\nrationale: verified in src/lib.rs:10 (cargo test passed)\n---END---\n" ;;
+  esac
+  exit 0
+fi
+exit 1
+"#;
+        fs::write(&bin, script).unwrap();
+        fs::set_permissions(&bin, fs::Permissions::from_mode(0o755)).unwrap();
+
+        let prev_home = std::env::var("LOPE_HOME").ok();
+        let prev_heal = std::env::var("LOPE_SELF_HEAL").ok();
+        std::env::set_var("LOPE_HOME", &lope_home);
+        std::env::set_var("LOPE_SELF_HEAL", "1");
+
+        struct MockBroken {
+            name: String,
+            bin: PathBuf,
+        }
+        impl Validator for MockBroken {
+            fn name(&self) -> &str {
+                &self.name
+            }
+            fn available(&self) -> bool {
+                true
+            }
+            fn transport(&self) -> &'static str {
+                "argv"
+            }
+            fn command_template(&self) -> Vec<String> {
+                vec![
+                    self.bin.to_string_lossy().to_string(),
+                    "--bad-flag".to_string(),
+                    "{prompt}".to_string(),
+                ]
+            }
+            fn generate(
+                &self,
+                prompt: &str,
+                _timeout: f64,
+                _ctx: Option<&Context>,
+            ) -> Result<String, ProviderError> {
+                let out = std::process::Command::new(&self.bin)
+                    .args(["--bad-flag", prompt])
+                    .output()
+                    .map_err(|e| ProviderError::Runtime(e.to_string()))?;
+                Err(ProviderError::Runtime(
+                    String::from_utf8_lossy(&out.stderr).to_string(),
+                ))
+            }
+        }
+
+        let broken = MockBroken {
+            name: "broken".into(),
+            bin: bin.clone(),
+        };
+        let err = broken
+            .generate("hello", 10.0, None)
+            .expect_err("old flag should fail");
+        let err_msg = err.to_string();
+        assert!(is_flag_error(&err_msg), "expected flag error, got: {err_msg}");
+
+        let reviewer: Arc<dyn Validator> = Arc::new(MockReviewer {
+            name: "claude".into(),
+            reply: format!(
+                "```json\n{{\"argv_template\":[\"{}\",\"--ask\",\"{{prompt}}\"],\"stdin_mode\":\"none\",\"stdout_parser\":\"plaintext\",\"confidence\":0.92,\"rationale\":\"updated flag\"}}\n```",
+                bin.display()
+            ),
+        });
+        let mut healer = SelfHealer::new();
+        let healed = try_self_heal_for_validator(&mut healer, &broken, &[reviewer], &err_msg, None)
+            .expect("self-heal should produce healed validator");
+
+        assert_eq!(
+            healed.command_template(),
+            vec![
+                bin.to_string_lossy().to_string(),
+                "--ask".to_string(),
+                "{prompt}".to_string(),
+            ]
+        );
+        let verify_out = std::process::Command::new(&bin)
+            .args(["--ask", "verify"])
+            .output()
+            .unwrap();
+        assert!(verify_out.status.success());
+        assert!(String::from_utf8_lossy(&verify_out.stdout).contains("status: PASS"));
+
+        let saved_cfg = load(&lope_home.join("config.json")).expect("saved config");
+        assert!(
+            saved_cfg.learned("broken").is_some(),
+            "learned_adapters should contain 'broken'"
+        );
+        let events = crate::journal::read_recent(10);
+        assert!(
+            events.iter().any(|e| e["event"] == "heal_success"),
+            "journal should record heal_success: {events:?}"
+        );
+
+        match prev_home {
+            Some(v) => std::env::set_var("LOPE_HOME", v),
+            None => std::env::remove_var("LOPE_HOME"),
+        }
+        match prev_heal {
+            Some(v) => std::env::set_var("LOPE_SELF_HEAL", v),
+            None => std::env::remove_var("LOPE_SELF_HEAL"),
+        }
     }
 }

@@ -388,6 +388,9 @@ impl Validator for Builtin {
     fn available(&self) -> bool {
         lope_core::paths::which(&self.binary).is_some()
     }
+    fn command_template(&self) -> Vec<String> {
+        vec![self.binary.clone()]
+    }
     fn transport(&self) -> &'static str {
         match self.kind {
             "opencode" | "gemini-cli" => "argv",

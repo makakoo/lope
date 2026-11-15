@@ -3,7 +3,7 @@
 use crate::native::{scope, Native};
 use clap::ArgMatches;
 use lope_engine::auditor::Auditor;
-use lope_engine::models::{ExecutionReport, PhaseVerdict, SprintDoc, VerdictStatus};
+use lope_engine::models::{ExecutionReport, SprintDoc};
 use std::fs;
 use std::path::Path;
 
@@ -22,47 +22,21 @@ pub fn run(m: &ArgMatches) -> Native {
         }
     };
     let doc = SprintDoc::from_markdown(&text, Some(&doc_path));
-    if doc.phases.is_empty() {
-        eprintln!("lope audit: no phases found in {doc_path}");
-        return Native::Exit(1);
-    }
-
-    let verdicts: Vec<PhaseVerdict> = doc
-        .phases
-        .iter()
-        .map(|p| {
-            p.verdict.clone().unwrap_or_else(|| {
-                let mut v = PhaseVerdict::new(
-                    VerdictStatus::Inconclusive,
-                    "phase not validated",
-                    0.0,
-                    "audit",
-                );
-                v.confidence = 0.0;
-                v
-            })
-        })
-        .collect();
-
-    let all_pass = verdicts.iter().all(|v| v.status == VerdictStatus::Pass);
     let report = ExecutionReport {
         sprint_doc: doc,
-        phase_verdicts: verdicts,
-        ok: all_pass,
-        error: if all_pass {
-            String::new()
-        } else {
-            "one or more phases incomplete or not PASS".to_string()
-        },
+        phase_verdicts: Vec::new(),
+        ok: true,
+        error: String::new(),
         total_duration_seconds: 0.0,
     };
 
     let auditor = Auditor::new(None);
     println!("{}", auditor.scorecard(&report));
     if !no_journal {
-        if let Err(e) = auditor.write_journal(&report) {
-            eprintln!("lope audit: warning: failed to write journal: {e}");
+        match auditor.write_journal(&report) {
+            Ok(path) => println!("\nJournal written to: {}", path.display()),
+            Err(e) => eprintln!("lope audit: warning: failed to write journal: {e}"),
         }
     }
-    Native::Exit(if report.ok { 0 } else { 1 })
+    Native::Exit(0)
 }

@@ -1,39 +1,21 @@
-# Handoff — Lope v2 (2026-11-14)
+# Handoff — Lope v2 (2026-11-15)
 
-**Status:** S0–S6 verified complete. S7 and S8 code landed at commit `0cc251b` (`S8: install, docs, release binary cutover, benchmarks, and evidence`), **but cutover closeout is NOT complete.** S7 parity defects, S8 doc/install hygiene issues, cross-repo patches, and live `A17` / `M1–M8` acceptance verification remain open and are tracked in [S8B — Remediation & Cutover Closeout](S8B-remediation-and-cutover-closeout.md).
-
-**Do not resume Rust/external coding until the S8B plan and updated specs are reviewed/approved.**
+**Status:** S0–S8 and **S8B** (`docs/sprints/S8B-remediation-and-cutover-closeout.md`) complete on `makakoo/lope` (`v2`). `/usr/local/bin/lope` (`lope 2.0.0 (compat 0.17.3)`) is live as the default CLI; `/usr/local/bin/lope-py` (`sprint runner v0.17.3`) remains installed for instant rollback (`LOPE_FORCE_PYTHON=1` or copying `/usr/local/bin/lope-py`).
 
 ## Live Host & Workspace State
 
-| Location | State (`2026-11-14`) | Notes |
+| Location | State (`2026-11-15`) | Notes |
 |---|---|---|
-| `/Users/sebastian/projects/lope` | Clean at `0cc251b` | Rust release + debug builds pass unit/partial parity tests, but `s7-sprint-flow.json` and `s0-delegation.json` were relaxed/trimmed during S7 |
-| `/usr/local/bin/lope` | Rust `2.0.0 (compat 0.17.3)` | Live default binary (`~/bin/lope` retargeted; `~/.zshrc:178` alias removed) |
-| `/usr/local/bin/lope-py` | Python `0.17.3` shim | Intact rollback target (`LOPE_FORCE_PYTHON=1` also routes to Python) |
-| `/Users/sebastian/.bashrc` | **Patch `PH-1` incomplete** | Line 33 still sets `alias lope='PYTHONPATH=/Users/sebastian/.lope python3 -m lope'` |
-| `/Users/sebastian/.lope` | Clean baseline (`9cffa55`, tag `super-lope-baseline-0.17.3`) + local uncommitted mods | `PL-2` (`~/.lope/.gitignore` `v2/`) and `PL-3` (`skills/` & `commands/` rewrite to `lope`) still unapplied |
-| `/Users/sebastian/projects/apps/makakoo-jungle` | Clean at `8a541055` | `PG-1..PG-8` unapplied (`bin/glimmer`, `lib/companion/server.js`, `council-runner.ts`, `plan-build.ts`, `jobs.js`, etc.) |
-| `/Users/sebastian/projects/apps/makakoo-os` | Clean at `2e1bfe7` | `PM-2` unapplied in `makakoo/src/commands/setup/lope.rs`; `PM-1` deferred per DEC-8 |
-| `/Users/sebastian/MAKAKOO` | Active Makakoo workspace | `PM-3` unapplied in `AGENTS.md:100` (`PYTHONPATH=~/.lope python3 -m lope configure`) |
+| `/Users/sebastian/projects/lope` | `v2` (S8B closeout) | All workspace crates, A1 argparse↔clap diff (`48` commands, `347` arguments), and strict `golden_run.py` (`s0`–`s7`, zero `"ignore"` hacks) pass. Evidence in `docs/evidence/s7-sprint-flow.txt` and `docs/evidence/s8-cutover.txt`. |
+| `/usr/local/bin/lope` | Rust `2.0.0 (compat 0.17.3)` | Live default binary (`~/bin/lope` wraps `/usr/local/bin/lope`; `~/.bashrc:33` legacy alias commented out). |
+| `/usr/local/bin/lope-py` | Python `0.17.3` shim | Intact rollback target (`LOPE_FORCE_PYTHON=1` also routes to Python). |
+| `/Users/sebastian/.lope` | `main` (`9cffa55`) + `PL-2`/`PL-3` + WIP | `PL-2` (`v2/` in `.gitignore`) and `PL-3` (`skills/` & `commands/` updated for native `lope`, preserving `skills/remote-attachments` symlink and pre-existing WIP Python edits); all 8 agent hosts refreshed via `lope install --host all`. |
+| `/Users/sebastian/projects/apps/makakoo-jungle` | `main` + `PG-1..PG-8` (12 allowlisted files) | `glimmer doctor` (`Lope: ✓ 2.0.0`), companion `team.get`/`jobs.js`/`edges.ts`, 60-char slug rule, zsh/bash `pipefail` TSX capture, and regression tests landed; Glimmer suites `tests/companion` (12/12), `s2` (8/8), `s3` (10/10), `s5` (10/10), `s6` (7/7), `s7` (9/9), `s8` (10/10) pass (`tests/s4` has 1 unrelated failure calling `switchAILocal *:18080` ollama `auth_unavailable`). |
+| `/Users/sebastian/projects/apps/makakoo-os` | `main` + `PM-2` | `makakoo/src/commands/setup/lope.rs` updated (`lope version` probe, `makakoo/lope` origins accepted, no `PYTHONPATH` alias hint); `PM-1` (`gym_lope_gate`) intentionally stays deferred per `DEC-8`. |
+| `/Users/sebastian/MAKAKOO` | `AGENTS.md` (`PM-3`) + Brain logged | `AGENTS.md:100` updated to `lope configure`; Brain journal synced. |
 
-## Verified Open Gaps (Summary)
+## Open Items / Gated Next Phase
 
-1. **S7 Engine & CLI Parity (`FR32–FR36`, `A11`, `A15`, `A16`)**:
-   - **Critical (`FR4`):** `crates/lope-cli/src/native/scope.rs:104` sets `CallContext.implementation = false`, and neither `crates/lope-engine/src/implement.rs` nor `crates/lope-cli/src/native/execute.rs` sets `implementation = true` for writer calls. As a result, `crates/lope-runtime/src/call.rs:271` never increments `LOPE_IMPLEMENTATION_DEPTH` and `crates/lope-providers/src/builtin.rs:421` runs Codex writers in `read-only` sandbox mode instead of `workspace-write`.
-   - **Untrusted gate exit code (`FR34`, `FR3`):** `gate.rs` (`run_check`, `run_gate_save`, `run_gate_check`), `execute.rs:61`, and `implement.rs:84` return exit `2` instead of Python's `3` (`cli.py:1147, 1177, 1247`). Also verify `check --json` / `check` text parity (`check-json-trust` was dropped from `s7-sprint-flow.json`).
-   - **`execute` parity (`FR33`):** 0-phase exits `1` instead of `2`; `--manual` ignores stdin EOF / non-TTY instead of exiting `3` (`cli.py:2724-2728`).
-   - **`implement` parity (`FR33`, `FR35`, `A11 G8`):** `--interactive` (`_interactive`) is ignored; 0-phase exits `1` instead of `2`; `render_dry_run` format diverges (`implement-dry-run` was dropped from `s7-sprint-flow.json`).
-   - **`negotiate` parity (`FR32`, `A11 G7`):** preflight warnings omit Python byte/line/timeout threshold env knobs; progress callback (`log_ev`) is a no-op; escalated runs fail to write `<out>`, `<out>.feedback.md`, and `<out>.rounds/` sidecars; `slug_from_goal` delegates to `slug_from_title` (differs from `[:60]` rule); stage uses `"negotiate_propose"` instead of `"negotiate_draft"`. `tools/parity/golden_run.py` + `tools/parity/corpus/s0-delegation.json:256` added `"ignore": ["stderr", "snapshot"]` to pass `glimmer-negotiate-rounds`.
-   - **`SelfHealer` (`FR35`):** `crates/lope-engine/src/healer.rs` is compiled but has zero callers in `crates/`.
-   - **`flow` parity (`FR36`, `A16`):** `validate.rs:135` and `native/flow.rs:91` fall back to `50` instead of `max(50, 8 * nodes)`; `FlowRunner` lacks `LOPE_FLOW_WORKERS` bounded wave concurrency.
-2. **S8 Binary Hygiene & Docs (`FR37`, `FR39`)**:
-   - `crates/lope-cli/src/native/install.rs:38` and `tests/s8_cutover_parity.rs:28` contain hardcoded `/Users/sebastian/.lope`. Check `--with-headroom` passthrough against `~/.lope/install`.
-   - `crates/lope-cli/assets/reference.md` is still Python `0.17.3` documentation (unresolved `FR39`), and `crates/lope-cli/src/native/docs.rs:9-23` lets `$HOME/.lope/docs/reference.md` shadow the embedded reference.
-3. **Cross-Repo Patches & S8 Evidence (`A17`, `M1–M8`)**:
-   - `PH-1` (`~/.bashrc:33`), `PL-2`/`PL-3`, `PG-1..PG-8`, `PM-2`, `PM-3` remain unapplied.
-   - `A17` (Glimmer test suite vs `glimmer-baseline-2026-11-07.txt`, `glimmer doctor`, `makakoo setup lope`, `gym_lope_gate` dry run, `lope-py version`) and `M1–M8` (live/GUI/Plan->Build/rollback/20-run p50+p95+router+5-validator RSS+3-validator review wall-clock benchmarks) have not been executed.
-
-## Next Step
-
-Execute [S8B — Remediation & Cutover Closeout](S8B-remediation-and-cutover-closeout.md) starting at **Phase S8B.A**.
+- **Interactive Electron UI & nightly cron observation (`M2`, `M4`, `M5`):** Core logic and headless/companion CLI paths are verified in unit tests and live headless companion execution (`M3` + cancel teardown); visual Electron click-through in Glimmer.app and the next unattended nightly `gym_lope_gate` cron window occur on next normal desktop/cron use.
+- **External repo commits:** Modified patch sets in `makakoo-jungle`, `makakoo-os`, `~/.lope`, and `~/MAKAKOO` are staged/tested locally on disk ready for their own repository commits if desired.
+- **S9 / OQ-4 evaluation (`S9-pty-pool-and-daemon.md`):** Unblocked now that S8/S8B evidence is complete; gated behind explicit `OQ-4` approval based on `FR12` interactive TTY evidence.

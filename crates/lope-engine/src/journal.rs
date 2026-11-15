@@ -8,15 +8,7 @@ use std::path::PathBuf;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 pub fn journal_path() -> PathBuf {
-    let home = std::env::var("LOPE_HOME")
-        .ok()
-        .filter(|s| !s.is_empty())
-        .map(PathBuf::from)
-        .unwrap_or_else(|| {
-            let h = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-            PathBuf::from(h).join(".lope")
-        });
-    home.join("journal.jsonl")
+    lope_core::paths::lope_home_get_default().join("journal.jsonl")
 }
 
 pub fn append_event(event: &str, payload: Vec<(&str, Value)>) {

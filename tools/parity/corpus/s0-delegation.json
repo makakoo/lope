@@ -151,6 +151,19 @@
   },
   {
    "name": "docs",
+   "route": "native",
+   "stdout_contract": "v2_docs",
+   "expect": {
+    "exit": 0,
+    "stdout_contains": [
+     "2.0.0",
+     "makakoo/lope",
+     "lope-py",
+     "LOPE_FORCE_PYTHON",
+     "lope --version",
+     "lope install"
+    ]
+   },
    "argv": [
     "docs"
    ]
@@ -253,8 +266,7 @@
    "expect": {
     "exit_not": 2
    },
-   "ignore": ["stderr", "snapshot"],
-   "comment": "Exit 1 on both sides: the mock drafter cannot write `### Phase N:` blocks, so Python's negotiator escalates. The S0 criterion is that Glimmer's --rounds argv no longer exits 2."
+   "comment": "Exit 1 on both sides: the mock drafter cannot write `### Phase N:` blocks, so Python's negotiator escalates."
   },
   {
    "name": "flow-init-writes-state",

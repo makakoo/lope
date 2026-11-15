@@ -28,6 +28,14 @@ impl Pool {
     pub fn primary_validator(&self) -> Option<Arc<dyn Validator>> {
         self.validators.iter().find(|v| v.name() == self.primary).cloned().or_else(|| self.validators.first().cloned())
     }
+    pub fn reviewers(&self) -> Vec<Arc<dyn Validator>> {
+        let primary = self.primary_validator();
+        self.validators
+            .iter()
+            .filter(|v| primary.as_ref().is_none_or(|p| !Arc::ptr_eq(v, p)))
+            .cloned()
+            .collect()
+    }
 }
 
 const KNOWN_GENERIC: [(&str, &[&str]); 10] = [

@@ -1,34 +1,63 @@
-Sprint S8 — Cutover, Install, Docs & Benchmarks
-================================================
+S8 & S8B Cutover Evidence (2026-11-15)
+========================================
 
-Implemented:
-- lope-cli/src/native/install.rs (`lope install [--host <h>]`, FR37):
-  Locates Lope skills/install assets (`LOPE_SOURCE_DIR`, exe-relative, `$HOME/.lope`) and runs `bash <assets>/install` for all 8 hosts (`claude`, `codex`, `gemini`, `opencode`, `cursor`, `vibe`, `qwen`, `pi`, `all`).
-- lope-cli/src/native/docs.rs (`lope docs`, FR39):
-  Outputs `reference.md` natively (checking `LOPE_SOURCE_DIR`, `$HOME/.lope/docs/reference.md`, and embedded `crates/lope-cli/assets/reference.md`).
-- `update` / `upgrade` (FR38, OQ-2):
-  Kept delegated to Python Lope until OQ-2 distribution format is decided.
-- Release binary & host cutover:
-  - Preserved Python shim at `/usr/local/bin/lope-py` (`lope-py version` -> `0.17.3`)
-  - Installed Rust release binary (`target/release/lope`) at `/usr/local/bin/lope` (`lope 2.0.0 (super-lope; compat 0.17.3)`)
-  - Retargeted `~/bin/lope` -> `/usr/local/bin/lope`
-  - Removed `~/.zshrc` Python alias (`alias lope=...`)
-  - Rollback: `cp /usr/local/bin/lope-py /usr/local/bin/lope` or `LOPE_FORCE_PYTHON=1`
+1. Installed Binaries & Host Wrapper
+------------------------------------
+- `/usr/local/bin/lope --version` -> `lope 2.0.0 (compat 0.17.3)`
+- `/usr/local/bin/lope-py version` -> `sprint runner v0.17.3`
+- `/Users/sebastian/bin/lope` -> `exec /usr/local/bin/lope "$@"` (resolved first in `bash -ic 'type lope'`, `zsh -ic 'type lope'`, and `bash -lc 'which lope; lope --version'`)
+- `LOPE_SOURCE_DIR=/Users/sebastian/projects/lope /usr/local/bin/lope install --host all` -> exit 0, backed up to `~/.local/state/lope/install-backups/20261115T114042Z-47540`, printed `OK — lope 2.0.0 (compat 0.17.3)`, refreshed all 8 hosts (`claude`, `codex`, `gemini`, `opencode`, `cursor`, `vibe`, `qwen`, `pi`).
+- `~/.lope/skills/` and `~/.lope/commands/` synced from `/Users/sebastian/projects/lope/{skills,commands}` (8 skills + 9 commands updated; `remote-attachments` symlink and pre-existing Python WIP preserved); `git -C ~/.lope check-ignore -q ~/.lope/v2/config.toml` -> exit 0.
+- `rg -n "PYTHONPATH=.*lope|python3 -m lope"` across `~/MAKAKOO/AGENTS.md`, `~/.lope/skills`, `~/.lope/commands`, `~/.codex/skills/lope*`, `~/.claude/skills/lope*`, `~/bin/lope` -> 0 matches.
 
-Benchmarks (Intel Mac, 5-run median, `/usr/bin/time -l`):
-| Command       | Rust median | Python median | Speedup | Rust max RSS | Python max RSS |
-|---------------|-------------|---------------|---------|--------------|----------------|
-| version       |      16.5ms |       312.5ms |   18.9x |        1.1MB |         14.6MB |
-| status        |      23.1ms |       329.8ms |   14.3x |        1.5MB |         15.8MB |
-| flow list     |      16.0ms |       331.7ms |   20.7x |        1.2MB |         15.5MB |
-| docs          |      17.2ms |       293.2ms |   17.0x |        1.2MB |         14.5MB |
-| memory stats  |      23.8ms |       327.0ms |   13.7x |        1.9MB |         16.1MB |
+2. Cross-Repo Patches & Verification
+------------------------------------
+- `makakoo-jungle` (`main` base `8a541055`, 12 allowlisted files; `PG-1`..`PG-8`):
+  - `bin/glimmer doctor` -> `Lope: ✓ 2.0.0`, `Lope sprint leases (unmanaged): 0`.
+  - `glimmer-baseline-post-cutover.txt`: 72/73 pass (`tests/companion` 12/12, `tests/s2` 8/8, `tests/s3` 10/10 [fixed from 9/10], `tests/s4` 6/7 [1 failure at `tests/s4/brain-palette.test.js:149` caused by external `switchAILocal *:18080` returning HTTP 500 `auth_unavailable`, unrelated to Lope], `tests/s5` 10/10, `tests/s6` 7/7, `tests/s7` 9/9, `tests/s8` 10/10; all NFR2/NFR8 Patch Allowlist checks pass).
+  - POSIX pipefail check (`(set -o pipefail; ... | tee ...); echo "$?"`) verified `ZSH_PIPE_EXIT=2` and `BASH_PIPE_EXIT=2` in both `zsh -c` and `bash -c`.
+- `makakoo-os` (`main` base `2e1bfe7`, `makakoo/src/commands/setup/lope.rs`; `PM-2`):
+  - `cargo test -p makakoo lope`: passed (`commands::setup::lope::tests` 6 passed, `adapter_live` 1 passed, `perms_cli` 2 passed, `setup_wizard` 1 passed).
+  - `cargo test -p makakoo --test setup_wizard`: 16 passed, 0 failed.
+  - `cargo run -p makakoo -- setup lope --non-interactive` -> `lope already-satisfied`.
+  - TTY `script -q /dev/null ./target/debug/makakoo setup lope </dev/null` -> `lope: already installed. No action needed.` (`lope 2.0.0 (compat 0.17.3)`).
 
-Verification:
-- `./scripts/cargo build --release`: passed
-- `./scripts/cargo test --workspace`: passed (exit 0), including:
-  - `s8_cutover_parity`: `s8_docs_and_install_all_8_hosts_and_update_delegation` passed
-  - `router_cli`: 8/8 passed
-  - `delegation_fidelity`: 27/27 golden_run cases identical
-  - `s1_native_parity`, `s3_team_parity`, `s4_fanout_parity`, `s6_deliberate_parity`, `s7_sprint_flow_parity` (2/2, 5/5 golden_run)
-  - `lope-compat` (22/22), `lope-core` (10/10), `lope-engine` (12/12 + 4/4), `lope-flow` (3/3), `lope-makakoo` (3/3), `lope-memory` (2/2), `lope-providers` (1/1 + 9/9), `lope-runtime` (1/1 + 5/5), `lope-state` (3/3 + 1/1)
+3. Acceptance Gates & Benchmarks (`A17`, `M1`..`M8`)
+----------------------------------------------------
+- `A17` / `M5` (`gym_lope_gate`):
+  - `PYTHONPATH=/Users/sebastian/MAKAKOO/plugins/lib-harvey-core/src pytest /Users/sebastian/MAKAKOO/tests/test_gym_lope_gate.py` -> 10 passed in 6.01s.
+  - `handle_gym_lope_gate()` dry run -> `{'status': 'ok', 'date': '2026-11-15', 'approved': 0, 'rejected': 0, 'malformed': 0, 'errors': 0}`.
+- `M1` (`lope review README.md --consensus --format markdown --timeout 120`, 6 validators):
+  - Rust: exit 1 (`inconclusive: substantive-result quorum 3/4 not met from 6 validators`), 3 ok (`codex=64.7s`, `claude=81.8s`, `claude-safe-review=82.9s`), 3 `provider_timeout` (`agy=120.4s`, `grok=120.4s`, `kimi=120.5s`), 55 raw -> 55 merged, wall 148.3s, parent peak footprint 5,226,496 B (4.98 MiB), max RSS 422,449,152 B.
+  - Python (`LOPE_FORCE_PYTHON=1`): exit 1 (quorum 3/4), same 3 ok (`codex=74.4s`, `claude=110.0s`, `claude-safe-review=86.1s`), same 3 timeouts (`agy=121.0s`, `grok=121.0s`, `kimi=120.9s`), 51 raw -> 51 merged, wall 161.9s, parent peak footprint 15,454,208 B (14.74 MiB), max RSS 385,339,392 B.
+- `M1` 3-validator live (`lope review README.md --validators codex,claude,claude-safe-review --consensus --format markdown --timeout 180`):
+  - Rust: exit 0, calls 3/3, wall 74.4s (`claude=74.1s`, `claude-safe-review=4.1s`, `codex=29.6s`), 48 raw -> 48 merged, parent peak footprint 3,641,344 B (3.47 MiB).
+  - Python: exit 0, calls 3/3, wall 67.8s (`claude=66.4s`, `claude-safe-review=60.4s`, `codex=23.6s`), 62 raw -> 62 merged, parent peak footprint 13,918,208 B (13.27 MiB).
+- `M3` (live isolated `CompanionServer` + `/usr/local/bin/lope` + `bin/glimmer run review`):
+  - `client.doctor().result.lope` -> `{"version":"2.0.0","commit":"unknown","ok":true,"primary":"mockval","validators":["mockval"]}`.
+  - `glimmer run review sample.txt` -> job `STATE: exited EXIT: 1`, `GLIMMER_RUN_REVIEW_EXIT: 4`, wrote `.jungle/reviews/<id>.md`; `client.cancelJob(...)` -> `{"ok":true,"result":{"cancelled":true}}`.
+  - Note: interactive Electron GUI clicks (`M2`/`M4`) and live nightly cron execution (`M5`) were not triggered interactively and rely on `M3`/unit tests/`gym_lope_gate` dry run.
+- `M6` (`/usr/local/bin/lope ask ... --validators claude-safe-review --brain-context "Makakoo" --brain-log --timeout 120`):
+  - Exit 0 (wall 20.9s, `claude-safe-review=10.2s`), injected Brain context, wrote journal entry to `/Users/sebastian/MAKAKOO/data/Brain/journals/2026_11_15.md`; `makakoo search "Lope v2 native CLI role"` ranked `2026_11_15.md` #1 (`score 25.556`).
+- `M7` Rollback drill (isolated `LOPE_HOME`):
+  - Rust `lope review README.md --validators mockval --remember` wrote session #5 (109 findings, 5 files, 5 sessions).
+  - `/usr/local/bin/lope-py` read Rust state (`status`, `jobs list`, `team list`, `memory stats` -> 0) and wrote session #6 (1 recurring finding).
+  - Rust `lope memory stats` read back 109 total, 1 recurring, 6 sessions.
+- `M8` Quiet-CPU Benchmarks (`load1=4.1 -> 3.63`, `cpus=8`):
+  - `scripts/bench-version.py /usr/local/bin/lope --runs 20`:
+    - Rust native `version`: `p50=12.0 ms`, `p95=12.5 ms`, `min=11.3 ms` (`+7.8 ms` above `/usr/bin/true` `4.2 ms` floor)
+    - Python `version`: `p50=199.9 ms`, `p95=209.9 ms`, `min=187.2 ms`
+    - Router delegation overhead (`version --help`): `p50 diff +3.4 ms`, `min diff -22.7 ms` (budget <= 15 ms)
+  - 20-run `/usr/bin/time -l` startup & RSS (includes wrapper overhead):
+    - `version`: Rust `p50=20.4ms p95=22.0ms RSS=1.10MB` vs Python `p50=246.3ms p95=255.7ms RSS=14.26MB` (`12.1x`)
+    - `status`: Rust `p50=21.4ms p95=21.8ms RSS=1.37MB` vs Python `p50=251.9ms p95=269.0ms RSS=15.58MB` (`11.8x`)
+    - `jobs list`: Rust `p50=19.5ms p95=20.6ms RSS=1.23MB` vs Python `p50=240.3ms p95=247.9ms RSS=15.46MB` (`12.3x`)
+    - `docs`: Rust `p50=18.9ms p95=19.9ms RSS=1.20MB` vs Python `p50=225.6ms p95=291.7ms RSS=14.42MB` (`11.9x`)
+    - `memory stats`: Rust `p50=24.1ms p95=25.8ms RSS=1.82MB` vs Python `p50=241.4ms p95=248.6ms RSS=15.75MB` (`10.0x`)
+  - 5-validator mock fan-out (5 runs): Rust `p50=2047.8ms maxRSS=4.48MB peakFoot=2.39MB` vs Python `p50=4436.5ms maxRSS=17.14MB peakFoot=13.62MB`.
+
+4. Final Verification Summary
+---------------------------
+- Workspace tests (`./scripts/cargo test --workspace`): 100% pass, 0 failed, 0 ignored.
+- Schema parity (`tools/parity/diff`): `compared 48 commands, 347 arguments` -> `PASS (0 differences, 0 allow-listed)`.
+- Golden corpus (`tools/parity/golden_run.py --lope /usr/local/bin/lope`): 177/177 identical across all 8 corpus files, 0 "ignore" hacks.

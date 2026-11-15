@@ -82,19 +82,7 @@ pub fn validate_one(
             }
             res
         }
-        Err(err) => {
-            let msg = err.to_string();
-            let mut res = infra_error(validator.name(), &msg, start.elapsed().as_secs_f64());
-            let lower = msg.to_lowercase();
-            if lower.contains("unknown")
-                || lower.contains("unrecognized")
-                || lower.contains("invalid option")
-                || lower.contains("flag")
-            {
-                res.flag_error_hint = msg.chars().take(300).collect();
-            }
-            res
-        }
+        Err(err) => infra_error(validator.name(), &err.to_string(), start.elapsed().as_secs_f64()),
     }
 }
 
@@ -105,6 +93,7 @@ pub fn pool_validate(
     ctx: Option<&Context>,
     stage: &str,
 ) -> ValidatorResult {
+    let mut healer = crate::healer::SelfHealer::new();
     if pool.ensemble {
         let available: Vec<_> = pool
             .validators
@@ -121,7 +110,7 @@ pub fn pool_validate(
             );
         }
 
-        let results = if pool.parallel && available.len() > 1 {
+        let mut results = if pool.parallel && available.len() > 1 {
             std::thread::scope(|s| {
                 let handles: Vec<_> = available
                     .iter()
@@ -145,6 +134,22 @@ pub fn pool_validate(
                 .collect()
         };
 
+        for r in &mut results {
+            if r.verdict.status == VerdictStatus::InfraError && !r.flag_error_hint.is_empty() {
+                if let Some(orig) = available.iter().find(|v| v.name() == r.validator_name) {
+                    if let Some(healed) = crate::healer::try_self_heal_for_validator(
+                        &mut healer,
+                        orig.as_ref(),
+                        &pool.validators,
+                        &r.flag_error_hint,
+                        ctx,
+                    ) {
+                        *r = validate_one(healed.as_ref(), prompt, timeout, ctx, stage);
+                    }
+                }
+            }
+        }
+
         let primary = if pool.primary.is_empty() {
             None
         } else {
@@ -162,7 +167,18 @@ pub fn pool_validate(
             continue;
         }
         attempts.push(v.name().to_string());
-        let res = validate_one(v.as_ref(), prompt, timeout, ctx, stage);
+        let mut res = validate_one(v.as_ref(), prompt, timeout, ctx, stage);
+        if res.verdict.status == VerdictStatus::InfraError && !res.flag_error_hint.is_empty() {
+            if let Some(healed) = crate::healer::try_self_heal_for_validator(
+                &mut healer,
+                v.as_ref(),
+                &pool.validators,
+                &res.flag_error_hint,
+                ctx,
+            ) {
+                res = validate_one(healed.as_ref(), prompt, timeout, ctx, stage);
+            }
+        }
         if !matches!(
             res.verdict.status,
             VerdictStatus::InfraError | VerdictStatus::Inconclusive

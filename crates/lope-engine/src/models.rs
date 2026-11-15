@@ -353,6 +353,21 @@ pub struct EscalationRequired {
     pub last_verdict: Option<PhaseVerdict>,
 }
 
+impl std::fmt::Display for EscalationRequired {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let status = self
+            .last_verdict
+            .as_ref()
+            .map(|v| v.status.as_str())
+            .unwrap_or("?");
+        write!(
+            f,
+            "Phase {} ({}) escalated: {} (last verdict: {status})",
+            self.phase_index, self.phase_name, self.reason
+        )
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Proposal {
     pub round_number: usize,

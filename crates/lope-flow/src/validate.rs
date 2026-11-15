@@ -132,7 +132,9 @@ pub fn forecast_graph(
     cfg: &LopeCfg,
 ) -> Value {
     let validator_count = validators.len().max(1);
-    let max_node_visits = graph.max_node_visits().unwrap_or(50);
+    let max_node_visits = graph
+        .max_node_visits()
+        .unwrap_or_else(|_| (8 * graph.nodes.len()).max(50));
     let theoretical_calls = max_node_visits * validator_count;
     let configured_call_limit = cfg.max_calls.as_u64().unwrap_or(96).max(1) as usize;
     let graph_call_limit = graph.max_model_calls().ok().flatten();
