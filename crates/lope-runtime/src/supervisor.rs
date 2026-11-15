@@ -40,6 +40,7 @@ enum Ev {
 struct Io {
     stdout: BoundedStream,
     stderr: BoundedStream,
+    stderr_hard_limit: usize,
     out_open: bool,
     err_open: bool,
     exited: Option<i32>,
@@ -60,7 +61,8 @@ impl Io {
             }
             Ev::Err(c) => {
                 self.last_byte = Some(Instant::now());
-                if self.stderr.add(&c) && over.is_none() {
+                let _ = self.stderr.add(&c);
+                if self.stderr.total > self.stderr_hard_limit && over.is_none() {
                     *over = Some("stderr");
                 }
             }
@@ -309,12 +311,18 @@ fn num_of(spec: &Value, k: &str, d: f64) -> f64 {
     spec.get(k).and_then(Value::as_f64).filter(|v| *v != 0.0).unwrap_or(d)
 }
 
+fn output_limit_reason(label: &str, stdout_limit: usize, stderr_limit: usize) -> String {
+    let limit = if label == "stdout" { stdout_limit } else { stderr_limit };
+    format!("{label} exceeded {limit} bytes")
+}
+
 /// Run one provider per the spec, feeding control events from `ctl`.
 pub fn run_provider(spec: &Value, ctl: Box<dyn Read + Send>) -> Value {
     let started = Instant::now();
     let timeout = num_of(spec, "timeout", 0.0);
     let stdout_limit = num_of(spec, "stdout_limit", 2.0 * 1024.0 * 1024.0) as usize;
     let stderr_limit = num_of(spec, "stderr_limit", 512.0 * 1024.0) as usize;
+    let stderr_hard_limit = (num_of(spec, "stderr_hard_limit", 32.0 * 1024.0 * 1024.0) as usize).max(stderr_limit);
     let budget = crate::cleanup_budget();
     let command: Vec<String> = match spec.get("command") {
         Some(Value::Array(a)) if !a.is_empty() && a.iter().all(Value::is_string) => {
@@ -437,6 +445,7 @@ pub fn run_provider(spec: &Value, ctl: Box<dyn Read + Send>) -> Value {
     let mut io = Io {
         stdout: BoundedStream::new(stdout_limit),
         stderr: BoundedStream::new(stderr_limit),
+        stderr_hard_limit,
         out_open: true,
         err_open: true,
         exited: None,
@@ -482,11 +491,10 @@ pub fn run_provider(spec: &Value, ctl: Box<dyn Read + Send>) -> Value {
             let cleanup = &fin.0;
             let drain_until = deadline.min(Instant::now() + Duration::from_secs_f64(DRAIN_AFTER_EXIT));
             io.pump_until(&rx, drain_until, |io| !io.out_open && !io.err_open);
-            if io.stdout.total > stdout_limit || io.stderr.total > stderr_limit {
+            if io.stdout.total > stdout_limit || io.stderr.total > stderr_hard_limit {
                 outcome = "output_limit".into();
                 let label = if io.stdout.total > stdout_limit { "stdout" } else { "stderr" };
-                reason =
-                    format!("{label} exceeded {} bytes", if label == "stdout" { stdout_limit } else { stderr_limit });
+                reason = output_limit_reason(label, stdout_limit, stderr_hard_limit);
             } else if !(cleanup == "clean" || cleanup.starts_with("clean:")) {
                 outcome = "cleanup_failed".into();
                 reason = "provider exited but owned descendants could not be reaped".into();
@@ -523,7 +531,7 @@ pub fn run_provider(spec: &Value, ctl: Box<dyn Read + Send>) -> Value {
         }
         if let Some(label) = over {
             outcome = "output_limit".into();
-            reason = format!("{label} exceeded {} bytes", if label == "stdout" { stdout_limit } else { stderr_limit });
+            reason = output_limit_reason(label, stdout_limit, stderr_hard_limit);
             fin = terminate_and_reap(&provider, &mut io, &rx, budget);
             break;
         }

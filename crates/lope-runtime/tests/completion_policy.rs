@@ -77,6 +77,35 @@ fn ordinary_outcomes() {
 }
 
 #[test]
+fn verbose_stderr_truncates_without_killing_and_enforces_hard_limit() {
+    common::setup();
+    let dir = tempfile::tempdir().unwrap();
+    // >512 KiB stderr must truncate in BoundedStream without aborting a clean run.
+    let noisy =
+        common::script(dir.path(), "noisy_ok", "head -c 655360 /dev/zero | tr '\\0' s >&2\necho 'FINAL_ANSWER'\n");
+    let req = Request::new(vec![noisy.display().to_string()], 10.0);
+    let c = run_subprocess_group(&req, None).unwrap();
+    assert_eq!(c.returncode, 0);
+    assert_eq!(c.stdout, "FINAL_ANSWER\n");
+    assert!(c.stderr.len() <= lope_runtime::call::DEFAULT_STDERR_LIMIT);
+    assert!(c.stderr.contains("[output truncated; head and tail preserved]"));
+
+    // Runaway stderr past stderr_hard_limit still terminates cleanly as OutputLimit.
+    let flood = common::script(dir.path(), "stderr_flood", "head -c 16384 /dev/zero | tr '\\0' e >&2\n");
+    let mut req = Request::new(vec![flood.display().to_string()], 10.0);
+    req.stderr_limit = 1000;
+    req.stderr_hard_limit = 4000;
+    match run_subprocess_group(&req, None) {
+        Err(lope_runtime::call::CallError::OutputLimit { stream, limit, stderr, .. }) => {
+            assert_eq!((stream.as_str(), limit), ("stderr", 4000));
+            assert!(stderr.len() <= 1000);
+            assert!(stderr.contains("[output truncated; head and tail preserved]"));
+        }
+        other => panic!("{other:?}"),
+    }
+}
+
+#[test]
 fn parent_death_kills_the_provider_group() {
     use std::io::Write;
     let dir = tempfile::tempdir().unwrap();

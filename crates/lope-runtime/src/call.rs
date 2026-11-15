@@ -12,9 +12,16 @@ use std::time::{Duration, Instant};
 
 pub const DEFAULT_STDOUT_LIMIT: usize = 2 * 1024 * 1024;
 pub const DEFAULT_STDERR_LIMIT: usize = 512 * 1024;
+/// Runaway stderr flood kill fuse; noisy CLIs like `codex` log traces to
+/// stderr and truncate safely inside `BoundedStream` up to this ceiling.
+pub const DEFAULT_STDERR_HARD_LIMIT: usize = 32 * 1024 * 1024;
 pub const SUPERVISOR_CLEANUP_RESERVE: f64 = 1.0;
 pub const ARGV_POLICY_LIMIT: usize = 128 * 1024;
 pub const ARG_MAX_RESERVE: usize = 32 * 1024;
+
+fn env_stderr_hard_limit() -> Option<usize> {
+    std::env::var("LOPE_STDERR_HARD_LIMIT").ok()?.trim().parse::<usize>().ok().filter(|v| *v > 0)
+}
 
 /// Registry context for a call (`context.metadata` in Python).
 #[derive(Debug, Clone, Default)]
@@ -39,6 +46,7 @@ pub struct Request {
     pub env: Vec<(String, Option<String>)>,
     pub stdout_limit: usize,
     pub stderr_limit: usize,
+    pub stderr_hard_limit: usize,
 }
 
 impl Request {
@@ -51,6 +59,7 @@ impl Request {
             env: vec![],
             stdout_limit: DEFAULT_STDOUT_LIMIT,
             stderr_limit: DEFAULT_STDERR_LIMIT,
+            stderr_hard_limit: env_stderr_hard_limit().unwrap_or(DEFAULT_STDERR_HARD_LIMIT),
         }
     }
 }
@@ -261,9 +270,10 @@ pub fn run_subprocess_group(req: &Request, mut ctx: Option<&mut CallContext>) ->
     if req.timeout.is_nan() || req.timeout <= 0.0 {
         return Err(CallError::Invalid("timeout must be positive".into()));
     }
-    if req.stdout_limit == 0 || req.stderr_limit == 0 {
+    if req.stdout_limit == 0 || req.stderr_limit == 0 || req.stderr_hard_limit == 0 {
         return Err(CallError::Invalid("output limits must be positive".into()));
     }
+    let effective_stderr_hard_limit = req.stderr_hard_limit.max(req.stderr_limit);
     if let Some(c) = ctx.as_deref_mut() {
         c.cleanup_result = Some("unknown".into());
     }
@@ -303,6 +313,7 @@ pub fn run_subprocess_group(req: &Request, mut ctx: Option<&mut CallContext>) ->
         "env": env_obj,
         "stdout_limit": req.stdout_limit,
         "stderr_limit": req.stderr_limit,
+        "stderr_hard_limit": effective_stderr_hard_limit,
         "ownership_marker": marker,
         "registry_root": ws.registry.as_ref().map(|(r, _, _)| r.root.display().to_string()).unwrap_or_default(),
         "run_id": ws.registry.as_ref().map(|(_, r, _)| r.clone()).unwrap_or_default(),
@@ -402,7 +413,7 @@ pub fn run_subprocess_group(req: &Request, mut ctx: Option<&mut CallContext>) ->
         }
         if outcome == "output_limit" {
             let stream = if reason.contains("stderr") { "stderr" } else { "stdout" };
-            let limit = if stream == "stderr" { req.stderr_limit } else { req.stdout_limit };
+            let limit = if stream == "stderr" { effective_stderr_hard_limit } else { req.stdout_limit };
             return Err(CallError::OutputLimit { stream: stream.into(), limit, stdout, stderr });
         }
         if outcome == "launch_error" {
