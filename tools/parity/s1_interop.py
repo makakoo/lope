@@ -11,7 +11,22 @@ A4: manifests written by either side are listed, reaped and closed by the
 """
 import json, os, shutil, subprocess, sys, tempfile, time
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-SRC = os.path.realpath(os.environ.get("LOPE_HOME") or os.path.expanduser("~/.lope"))
+_USER_LOPE_HOME = os.path.realpath(os.environ.get("LOPE_HOME") or os.path.expanduser("~/.lope"))
+
+
+def _find_python_src():
+    for candidate in (
+        os.environ.get("LOPE_PYTHON_CHECKOUT"),
+        os.environ.get("LOPE_HOME"),
+        ROOT,
+        os.path.expanduser("~/.lope"),
+    ):
+        if candidate and os.path.isfile(os.path.join(os.path.realpath(candidate), "lope", "__init__.py")):
+            return os.path.realpath(candidate)
+    return _USER_LOPE_HOME
+
+
+SRC = _find_python_src()
 sys.path.insert(0, SRC)
 EX = os.path.join(ROOT, "target", "debug", "examples")
 fails = []
@@ -51,7 +66,7 @@ fixtures = {} if "a3" not in SECTIONS else {
     "rej_bad_learned_float": {"version": 1, "validators": [], "primary": "", "learned_adapters": {"a": {"argv_template": [], "timestamp": "x"}}},
 }
 tmp = tempfile.mkdtemp(prefix="s1-a3-")
-live = os.path.join(SRC, "config.json")
+live = os.path.join(_USER_LOPE_HOME, "config.json")
 if os.path.exists(live) and "a3" in SECTIONS:
     fixtures["live_shape"] = json.load(open(live))
 for name, data in fixtures.items():

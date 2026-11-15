@@ -32,8 +32,8 @@ dev = [
 lope = "lope.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/traylinx/lope"
-Repository = "https://github.com/traylinx/lope"
+Homepage = "https://github.com/makakoo/lope"
+Repository = "https://github.com/makakoo/lope"
 
 [build-system]
 requires = ["hatchling"]

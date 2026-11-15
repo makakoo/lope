@@ -1,13 +1,23 @@
 # Code owners for lope. The owner is auto-requested for review on PRs that
 # touch matching paths. Default owner covers the whole repo; security-critical
-# surfaces are listed explicitly so they can't be changed without owner review.
+# and release-trust-boundary surfaces are listed explicitly.
 
 * @rschumann
 
-# Security-critical surfaces.
-/.github/        @rschumann
-/.gitleaks.toml  @rschumann
-/SECURITY.md     @rschumann
-/lope/gates.py   @rschumann
-/install         @rschumann
-/scripts/        @rschumann
+# Release, CI, supply-chain, and parity/compatibility boundaries.
+/.github/                  @rschumann
+/.gitleaks.toml            @rschumann
+/SECURITY.md               @rschumann
+/Cargo.toml                @rschumann
+/Cargo.lock                @rschumann
+/rust-toolchain.toml       @rschumann
+/pyproject.toml            @rschumann
+/install                   @rschumann
+/scripts/                  @rschumann
+/crates/lope-cli/          @rschumann
+/crates/lope-core/         @rschumann
+/crates/lope-engine/       @rschumann
+/crates/lope-runtime/      @rschumann
+/crates/lope-compat/       @rschumann
+/tools/parity/             @rschumann
+/lope/gates.py             @rschumann

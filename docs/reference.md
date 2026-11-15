@@ -637,6 +637,7 @@ Custom providers via `~/.lope/config.json` — subprocess or HTTP. Schema in the
 | `LOPE_DOCS_PATH` | Explicit file path override for `lope docs`. |
 | `LOPE_SOURCE_DIR` | Explicit Lope repo/asset directory override for `lope install` and `lope docs`. |
 | `LOPE_FLOW_WORKERS` | Max concurrent worker branches in `lope flow run` wave execution (default `5`). |
+| `LOPE_STDERR_HARD_LIMIT` | Hard kill ceiling in bytes for subprocess `stderr` (default `33554432` / 32 MiB; `0` or invalid values fall back to default). In-memory `stderr` capture remains bounded to 512 KiB head+tail via `BoundedStream`, while exceeding the hard ceiling kills the process group and reports `output_limit` distinctly from timeout. |
 | **Self-heal** | |
 | `LOPE_SELF_HEAL` | `1`/`true`/`yes`/`on` to enable adapter self-healing on flag-break detection in `execute`, `implement`, and `negotiate` (opt-in; off by default). |
 | `LOPE_HOME` | Override `~/.lope` for shared state/config directory (`config.json`, `latency.json`, `journal.jsonl`, `memory.db`). |

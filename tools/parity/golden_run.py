@@ -332,12 +332,26 @@ def unified(expected, actual):
     return "\n".join(list(lines)[:40])
 
 
+def _default_python_checkout():
+    """Locate the read-only Python Lope checkout used to populate parity sandboxes."""
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+    for candidate in (
+        os.environ.get("LOPE_PYTHON_CHECKOUT"),
+        os.environ.get("LOPE_HOME"),
+        repo_root,
+        os.path.expanduser("~/.lope"),
+    ):
+        if candidate and os.path.isfile(os.path.join(candidate, "lope", "__init__.py")):
+            return os.path.realpath(candidate)
+    return repo_root
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lope", required=True, help="Rust lope binary")
     ap.add_argument("--corpus", required=True)
-    ap.add_argument("--lope-home", default=os.environ.get("LOPE_HOME") or os.path.expanduser("~/.lope"),
-                    help="source Python Lope checkout (default $LOPE_HOME or ~/.lope)")
+    ap.add_argument("--lope-home", default=_default_python_checkout(),
+                    help="source Python Lope checkout (default $LOPE_PYTHON_CHECKOUT, ~/.lope if git checkout, or repo root)")
     ap.add_argument("--only")
     ap.add_argument("--keep", help="keep sandboxes under this directory")
     ap.add_argument("--show", action="store_true", help="print both sides' raw stdout/stderr")

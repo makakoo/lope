@@ -11,20 +11,30 @@ fn has_install_script(dir: &Path) -> bool {
 
 pub fn find_assets_root() -> Option<PathBuf> {
     if let Ok(src) = std::env::var("LOPE_SOURCE_DIR") {
-        let p = PathBuf::from(src);
-        if has_install_script(&p) {
-            return Some(p);
+        if !src.trim().is_empty() {
+            let p = PathBuf::from(src);
+            if has_install_script(&p) {
+                return Some(p);
+            }
         }
     }
-    if let Some(dir) = std::env::current_exe().ok().and_then(|e| e.parent().map(Path::to_path_buf)) {
-        for cand in [
-            dir.clone(),
-            dir.join("../share/lope"),
-            dir.join("../../.."),
-            dir.join("../../../.."),
-        ] {
-            if has_install_script(&cand) {
-                return Some(cand);
+    if let Ok(exe) = std::env::current_exe() {
+        let mut dirs = Vec::new();
+        if let Some(d) = exe.parent() {
+            dirs.push(d.to_path_buf());
+        }
+        if let Ok(canon) = std::fs::canonicalize(&exe) {
+            if let Some(d) = canon.parent() {
+                if !dirs.iter().any(|existing| existing == d) {
+                    dirs.push(d.to_path_buf());
+                }
+            }
+        }
+        for dir in dirs {
+            for cand in [dir.clone(), dir.join("../share/lope"), dir.join("../../.."), dir.join("../../../..")] {
+                if has_install_script(&cand) {
+                    return Some(cand);
+                }
             }
         }
     }
@@ -48,6 +58,9 @@ pub fn run(m: &ArgMatches) -> Native {
         cmd.args(["--host", &host]);
     }
     cmd.env("LOPE_ENGINE_ROOT", &assets);
+    if let Ok(exe) = std::env::current_exe() {
+        cmd.env("LOPE_BIN", exe);
+    }
     if std::env::var_os("LOPE_PACKAGED_INSTALL").is_none() {
         cmd.env("LOPE_PACKAGED_INSTALL", "1");
     }

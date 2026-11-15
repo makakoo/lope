@@ -5,7 +5,19 @@
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
 root=$(cd "$here/../.." && pwd)
-lope_home=${LOPE_HOME:-$HOME/.lope}
+if [ -n "${LOPE_PYTHON_CHECKOUT:-}" ]; then
+    [ -f "$LOPE_PYTHON_CHECKOUT/lope/__init__.py" ] || {
+        echo "dump-python: LOPE_PYTHON_CHECKOUT='$LOPE_PYTHON_CHECKOUT' does not contain lope/__init__.py" >&2
+        exit 1
+    }
+    lope_home="$LOPE_PYTHON_CHECKOUT"
+elif [ -n "${LOPE_HOME:-}" ] && [ -f "$LOPE_HOME/lope/__init__.py" ]; then
+    lope_home="$LOPE_HOME"
+elif [ -f "$root/lope/__init__.py" ]; then
+    lope_home="$root"
+else
+    lope_home="$HOME/.lope"
+fi
 mkdir -p "$here/out"
 scratch=$(mktemp -d)
 trap 'rm -rf "$scratch"' EXIT

@@ -377,6 +377,8 @@ def main():
     rev.add_argument("--format", dest="output_format", default="text",
                      choices=["text", "json", "markdown", "markdown-pr", "sarif"],
                      help="Output format for consensus mode (default: text)")
+    rev.add_argument("--output", "-o", default=None,
+                     help="Write output report directly to file path")
     rev.add_argument("--include-raw", dest="include_raw", action="store_true",
                      help="Append raw per-validator responses to consensus output")
     rev.add_argument("--remember", action="store_true",
@@ -679,7 +681,27 @@ def main():
         action="store_true",
         help="Show typed actions/refusals without signalling or deleting",
     )
+    jobs_reap.add_argument(
+        "--stale",
+        action="store_true",
+        help="Prune confirmed stale runs whose processes are dead",
+    )
     jobs_reap.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
+    jobs_prune = jobs_sub.add_parser(
+        "prune",
+        help="Prune stale or abandoned Lope-owned runs",
+    )
+    jobs_prune.add_argument(
+        "--stale",
+        action="store_true",
+        help="Prune runs verified stale",
+    )
+    jobs_prune.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show typed actions without deleting",
+    )
+    jobs_prune.add_argument("--json", action="store_true", help="Emit machine-readable JSON")
     jobs_kill = jobs_sub.add_parser(
         "kill",
         help="Cancel one fingerprint-verified Lope run by run ID",
@@ -1708,7 +1730,7 @@ def _cmd_jobs(args):
 
     sub_cmd = getattr(args, "jobs_cmd", None) or "list"
     registry = RunRegistry()
-    if sub_cmd == "reap":
+    if sub_cmd in {"reap", "prune"}:
         rows = registry.reap_all(dry_run=bool(getattr(args, "dry_run", False)))
         payload = {
             "schema_version": 1,
@@ -1716,14 +1738,15 @@ def _cmd_jobs(args):
             "actions": rows,
             "count": len(rows),
         }
+        action_verb = "prune" if sub_cmd == "prune" else "reap"
         if getattr(args, "json", False):
             from .output import print_json
 
             print_json(payload)
         elif not rows:
-            print("No active or stale Lope-owned jobs to reap.")
+            print(f"No active or stale Lope-owned jobs to {action_verb}.")
         else:
-            print("Lope jobs reap" + (" (dry-run):" if payload["dry_run"] else ":"))
+            print(f"Lope jobs {action_verb}" + (" (dry-run):" if payload["dry_run"] else ":"))
             for row in rows:
                 print(
                     f"  {row.get('run_id', '?')}  {row.get('classification', '?'):<20} "
@@ -4264,12 +4287,22 @@ def _cmd_review_consensus(args, file_path, content, output_format):
             payload["schema_version"] = 1
             payload["partial"] = True
             payload["reason"] = quorum_reason
-        print(_j.dumps(payload, indent=2, sort_keys=True))
+        out_text = _j.dumps(payload, indent=2, sort_keys=True)
+        if getattr(args, "output", None):
+            out_p = Path(args.output)
+            out_p.parent.mkdir(parents=True, exist_ok=True)
+            out_p.write_text(out_text + "\n", encoding="utf-8")
+        print(out_text)
         if not quorum_ok:
             sys.exit(1)
         return
 
     # Human / markdown / markdown-pr — append synthesis + memory footer.
+    if getattr(args, "output", None):
+        out_p = Path(args.output)
+        out_p.parent.mkdir(parents=True, exist_ok=True)
+        out_p.write_text(rendered if rendered.endswith("\n") else rendered + "\n", encoding="utf-8")
+
     print(rendered, end="" if rendered.endswith("\n") else "\n")
     if synth is not None:
         from .synthesis import format_synthesis as _fmt_synth

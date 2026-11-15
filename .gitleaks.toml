@@ -24,6 +24,32 @@ paths = [
   '''__pycache__''',
   '''\.pyc$''',
   '''\.opencode/''',
+  '''^target/''',
+  '''/target/''',
+]
+
+[[allowlists]]
+description = "Rust redaction unit test PEM fixture (crates/lope-core/src/redaction.rs:115)."
+paths = ['''crates/lope-core/src/redaction\.rs$''']
+regexTarget = "match"
+regexes = [
+  '''-----BEGIN RSA PRIVATE KEY-----(?:\\n|\r?\n)MIIx(?:\\n|\r?\n)-----END RSA PRIVATE KEY-----''',
+]
+
+[[allowlists]]
+description = "Parity fuzz token table PEM marker snippet (tools/parity/redact_fuzz.py:9)."
+paths = ['''tools/parity/redact_fuzz\.py$''']
+regexTarget = "match"
+regexes = [
+  '''-----BEGIN RSA PRIVATE KEY-----"[\s\S]{0,40}"-----END RSA PRIVATE KEY-----''',
+]
+
+[[allowlists]]
+description = "Golden parity literal-key refusal fixture (tools/parity/corpus/s3-team.json)."
+paths = ['''tools/parity/corpus/s3-team\.json$''']
+regexTarget = "match"
+regexes = [
+  '''Bearer sk-123456''',
 ]
 
 [[allowlists]]

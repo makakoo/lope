@@ -61,13 +61,8 @@ unsafe extern "C" {
     ) -> c_int;
     fn sqlite3_step(stmt: *mut sqlite3_stmt) -> c_int;
     fn sqlite3_finalize(stmt: *mut sqlite3_stmt) -> c_int;
-    fn sqlite3_bind_text(
-        stmt: *mut sqlite3_stmt,
-        idx: c_int,
-        val: *const c_char,
-        n: c_int,
-        destructor: isize,
-    ) -> c_int;
+    fn sqlite3_bind_text(stmt: *mut sqlite3_stmt, idx: c_int, val: *const c_char, n: c_int, destructor: isize)
+        -> c_int;
     fn sqlite3_bind_int64(stmt: *mut sqlite3_stmt, idx: c_int, val: i64) -> c_int;
     fn sqlite3_bind_double(stmt: *mut sqlite3_stmt, idx: c_int, val: c_double) -> c_int;
     fn sqlite3_bind_null(stmt: *mut sqlite3_stmt, idx: c_int) -> c_int;
@@ -157,8 +152,7 @@ impl Drop for SqliteConn {
 
 impl SqliteConn {
     fn open(path: &Path) -> Result<Self, String> {
-        let cpath = CString::new(path.to_string_lossy().as_bytes())
-            .map_err(|e| format!("invalid db path: {e}"))?;
+        let cpath = CString::new(path.to_string_lossy().as_bytes()).map_err(|e| format!("invalid db path: {e}"))?;
         let mut db: *mut sqlite3 = ptr::null_mut();
         let rc = unsafe { sqlite3_open(cpath.as_ptr(), &mut db) };
         if rc != SQLITE_OK {
@@ -190,8 +184,7 @@ impl SqliteConn {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let mut errmsg: *mut c_char = ptr::null_mut();
-            let rc =
-                unsafe { sqlite3_exec(self.db, csql.as_ptr(), None, ptr::null_mut(), &mut errmsg) };
+            let rc = unsafe { sqlite3_exec(self.db, csql.as_ptr(), None, ptr::null_mut(), &mut errmsg) };
             if rc == SQLITE_OK {
                 return Ok(());
             }
@@ -215,9 +208,7 @@ impl SqliteConn {
         let deadline = std::time::Instant::now() + std::time::Duration::from_secs(5);
         loop {
             let mut stmt: *mut sqlite3_stmt = ptr::null_mut();
-            let rc = unsafe {
-                sqlite3_prepare_v2(self.db, csql.as_ptr(), -1, &mut stmt, ptr::null_mut())
-            };
+            let rc = unsafe { sqlite3_prepare_v2(self.db, csql.as_ptr(), -1, &mut stmt, ptr::null_mut()) };
             if rc != SQLITE_OK {
                 let msg = self.err_msg();
                 if msg.contains("locked") && std::time::Instant::now() < deadline {
@@ -329,13 +320,7 @@ fn bind_params(stmt: *mut sqlite3_stmt, params: &[SqlParam], conn: &SqliteConn) 
             SqlParam::Int(v) => unsafe { sqlite3_bind_int64(stmt, idx, *v) },
             SqlParam::Float(v) => unsafe { sqlite3_bind_double(stmt, idx, *v) },
             SqlParam::Text(s) => unsafe {
-                sqlite3_bind_text(
-                    stmt,
-                    idx,
-                    s.as_ptr() as *const c_char,
-                    s.len() as c_int,
-                    SQLITE_TRANSIENT,
-                )
+                sqlite3_bind_text(stmt, idx, s.as_ptr() as *const c_char, s.len() as c_int, SQLITE_TRANSIENT)
             },
         };
         if rc != SQLITE_OK {
@@ -351,10 +336,7 @@ pub fn is_memory_disabled() -> bool {
     let Ok(raw) = std::env::var(ENV_DISABLE) else {
         return false;
     };
-    matches!(
-        raw.trim().to_ascii_lowercase().as_str(),
-        "off" | "no" | "0" | "false" | "disabled"
-    )
+    matches!(raw.trim().to_ascii_lowercase().as_str(), "off" | "no" | "0" | "false" | "disabled")
 }
 
 pub fn default_db_path() -> PathBuf {
@@ -367,9 +349,7 @@ pub fn default_db_path() -> PathBuf {
             return PathBuf::from(s);
         }
     }
-    lope_core::paths::home_dir()
-        .join(DEFAULT_DIR_NAME)
-        .join(DEFAULT_DB_NAME)
+    lope_core::paths::home_dir().join(DEFAULT_DIR_NAME).join(DEFAULT_DB_NAME)
 }
 
 fn utc_iso_from_epoch(secs: i64) -> String {
@@ -465,34 +445,15 @@ pub struct ConsensusFindingInput {
 }
 
 fn record_from_consensus(f: &ConsensusFindingInput, now: &str) -> FindingRecord {
-    let detected: Vec<String> = f
-        .detected_by
-        .iter()
-        .map(|n| redact_text(n).trim().to_string())
-        .collect();
+    let detected: Vec<String> = f.detected_by.iter().map(|n| redact_text(n).trim().to_string()).collect();
     let mut evidence = Map::new();
     for (k, v) in &f.evidence {
         let vs = v.as_str().unwrap_or("");
-        evidence.insert(
-            redact_text(k).trim().to_string(),
-            Value::String(redact_text(vs).trim().to_string()),
-        );
+        evidence.insert(redact_text(k).trim().to_string(), Value::String(redact_text(vs).trim().to_string()));
     }
-    let file_val = f
-        .file
-        .as_deref()
-        .map(|s| redact_text(s).trim().to_string())
-        .filter(|s| !s.is_empty());
-    let cat_val = f
-        .category
-        .as_deref()
-        .map(|s| redact_text(s).trim().to_string())
-        .filter(|s| !s.is_empty());
-    let sev = if f.severity.is_empty() {
-        "info".to_string()
-    } else {
-        f.severity.clone()
-    };
+    let file_val = f.file.as_deref().map(|s| redact_text(s).trim().to_string()).filter(|s| !s.is_empty());
+    let cat_val = f.category.as_deref().map(|s| redact_text(s).trim().to_string()).filter(|s| !s.is_empty());
+    let sev = if f.severity.is_empty() { "info".to_string() } else { f.severity.clone() };
     FindingRecord {
         id: None,
         hash: f.hash.clone(),
@@ -549,11 +510,7 @@ fn row_to_finding(r: &Map<String, Value>) -> FindingRecord {
         .and_then(Value::as_str)
         .and_then(|s| pyjson::loads(s).ok())
         .and_then(|v| v.as_array().cloned())
-        .map(|arr| {
-            arr.into_iter()
-                .filter_map(|x| x.as_str().map(String::from))
-                .collect()
-        })
+        .map(|arr| arr.into_iter().filter_map(|x| x.as_str().map(String::from)).collect())
         .unwrap_or_default();
     let evidence: Map<String, Value> = r
         .get("evidence_json")
@@ -564,52 +521,22 @@ fn row_to_finding(r: &Map<String, Value>) -> FindingRecord {
 
     FindingRecord {
         id: r.get("id").and_then(Value::as_i64),
-        hash: r
-            .get("hash")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
-        message: r
-            .get("message")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
+        hash: r.get("hash").and_then(Value::as_str).unwrap_or("").to_string(),
+        message: r.get("message").and_then(Value::as_str).unwrap_or("").to_string(),
         file: r.get("file").and_then(Value::as_str).map(String::from),
         line: r.get("line").and_then(Value::as_i64),
         end_line: r.get("end_line").and_then(Value::as_i64),
-        severity: r
-            .get("severity")
-            .and_then(Value::as_str)
-            .unwrap_or("info")
-            .to_string(),
+        severity: r.get("severity").and_then(Value::as_str).unwrap_or("info").to_string(),
         category: r.get("category").and_then(Value::as_str).map(String::from),
         confidence: r.get("confidence").and_then(Value::as_f64).unwrap_or(0.0),
-        consensus_score: r
-            .get("consensus_score")
-            .and_then(Value::as_f64)
-            .unwrap_or(0.0),
-        consensus_level: r
-            .get("consensus_level")
-            .and_then(Value::as_str)
-            .unwrap_or("unverified")
-            .to_string(),
+        consensus_score: r.get("consensus_score").and_then(Value::as_f64).unwrap_or(0.0),
+        consensus_level: r.get("consensus_level").and_then(Value::as_str).unwrap_or("unverified").to_string(),
         agreement_count: r.get("agreement_count").and_then(Value::as_i64).unwrap_or(0),
-        total_validators: r
-            .get("total_validators")
-            .and_then(Value::as_i64)
-            .unwrap_or(0),
+        total_validators: r.get("total_validators").and_then(Value::as_i64).unwrap_or(0),
         detected_by,
         evidence,
-        first_seen_at: r
-            .get("first_seen_at")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
-        last_seen_at: r
-            .get("last_seen_at")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string(),
+        first_seen_at: r.get("first_seen_at").and_then(Value::as_str).unwrap_or("").to_string(),
+        last_seen_at: r.get("last_seen_at").and_then(Value::as_str).unwrap_or("").to_string(),
         seen_count: r.get("seen_count").and_then(Value::as_i64).unwrap_or(1),
     }
 }
@@ -726,9 +653,7 @@ impl LopeMemory {
         if let Some(parent) = db_path.parent() {
             std::fs::create_dir_all(parent).map_err(|e| e.to_string())?;
         }
-        let mem = LopeMemory {
-            db_path: db_path.to_path_buf(),
-        };
+        let mem = LopeMemory { db_path: db_path.to_path_buf() };
         let conn = mem.connect()?;
         conn.exec_batch(SCHEMA_SQL)?;
         mem.migrate(&conn)?;
@@ -741,11 +666,7 @@ impl LopeMemory {
 
     fn migrate(&self, conn: &SqliteConn) -> Result<i64, String> {
         let rows = conn.query("PRAGMA user_version", &[])?;
-        let current = rows
-            .first()
-            .and_then(|r| r.values().next())
-            .and_then(Value::as_i64)
-            .unwrap_or(0);
+        let current = rows.first().and_then(|r| r.values().next()).and_then(Value::as_i64).unwrap_or(0);
         if current > SCHEMA_VERSION {
             return Err(format!(
                 "{} was created by a newer Lope (schema v{current}; this build understands v{SCHEMA_VERSION}). Upgrade Lope, or point LOPE_MEMORY_DB at a different file.",
@@ -783,10 +704,7 @@ impl LopeMemory {
     }
 
     fn reject_incompatible_tables(conn: &SqliteConn) -> Result<(), String> {
-        let exists = conn.query(
-            "SELECT 1 FROM sqlite_master WHERE type='table' AND name='verdict_events'",
-            &[],
-        )?;
+        let exists = conn.query("SELECT 1 FROM sqlite_master WHERE type='table' AND name='verdict_events'", &[])?;
         if exists.is_empty() {
             return Ok(());
         }
@@ -814,22 +732,11 @@ impl LopeMemory {
             .into_iter()
             .filter_map(|r| r.get("name").and_then(Value::as_str).map(String::from))
             .collect();
-        let required = [
-            "findings",
-            "gate_sessions",
-            "review_sessions",
-            "session_findings",
-            "verdict_events",
-        ];
-        let mut missing: Vec<&str> = required
-            .into_iter()
-            .filter(|t| !names.contains(*t))
-            .collect();
+        let required = ["findings", "gate_sessions", "review_sessions", "session_findings", "verdict_events"];
+        let mut missing: Vec<&str> = required.into_iter().filter(|t| !names.contains(*t)).collect();
         if !missing.is_empty() {
             missing.sort();
-            return Err(format!(
-                "migration validation failed: missing table(s) {missing:?}"
-            ));
+            return Err(format!("migration validation failed: missing table(s) {missing:?}"));
         }
         for t in required {
             let _ = conn.query(&format!("SELECT 1 FROM {t} LIMIT 1"), &[])?;
@@ -847,16 +754,10 @@ impl LopeMemory {
         duration_ms: i64,
     ) -> Result<(i64, Vec<FindingRecord>), String> {
         let now = now_iso();
-        let records: Vec<FindingRecord> = findings
-            .iter()
-            .map(|f| record_from_consensus(f, &now))
-            .collect();
-        let clean_validators: Vec<Value> = validators
-            .iter()
-            .map(|v| Value::String(redact_text(v).trim().to_string()))
-            .collect();
-        let validators_json =
-            pyjson::dumps(&Value::Array(clean_validators), &pyjson::Opts::default());
+        let records: Vec<FindingRecord> = findings.iter().map(|f| record_from_consensus(f, &now)).collect();
+        let clean_validators: Vec<Value> =
+            validators.iter().map(|v| Value::String(redact_text(v).trim().to_string())).collect();
+        let validators_json = pyjson::dumps(&Value::Array(clean_validators), &pyjson::Opts::default());
 
         let conn = self.connect()?;
         let (_, session_id) = conn.execute(
@@ -887,32 +788,15 @@ impl LopeMemory {
         Ok((session_id, stored))
     }
 
-    fn upsert_finding(
-        &self,
-        conn: &SqliteConn,
-        mut record: FindingRecord,
-        now: &str,
-    ) -> Result<FindingRecord, String> {
-        let existing_rows = conn.query(
-            "SELECT * FROM findings WHERE hash = ?",
-            &[SqlParam::from(record.hash.as_str())],
-        )?;
+    fn upsert_finding(&self, conn: &SqliteConn, mut record: FindingRecord, now: &str) -> Result<FindingRecord, String> {
+        let existing_rows =
+            conn.query("SELECT * FROM findings WHERE hash = ?", &[SqlParam::from(record.hash.as_str())])?;
         let Some(existing) = existing_rows.first() else {
             let det_json = pyjson::dumps(
-                &Value::Array(
-                    record
-                        .detected_by
-                        .iter()
-                        .cloned()
-                        .map(Value::String)
-                        .collect(),
-                ),
+                &Value::Array(record.detected_by.iter().cloned().map(Value::String).collect()),
                 &pyjson::Opts::default(),
             );
-            let ev_json = pyjson::dumps(
-                &Value::Object(record.evidence.clone()),
-                &pyjson::Opts::default(),
-            );
+            let ev_json = pyjson::dumps(&Value::Object(record.evidence.clone()), &pyjson::Opts::default());
             let (_, row_id) = conn.execute(
                 "INSERT INTO findings (hash, message, file, line, end_line, severity, category, confidence, consensus_score, consensus_level, agreement_count, total_validators, detected_by_json, evidence_json, first_seen_at, last_seen_at, seen_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 &[
@@ -940,8 +824,7 @@ impl LopeMemory {
         };
 
         let ex = row_to_finding(existing);
-        let merged_level =
-            max_consensus_level(&ex.consensus_level, &record.consensus_level).to_string();
+        let merged_level = max_consensus_level(&ex.consensus_level, &record.consensus_level).to_string();
         let merged_detected = merge_string_lists(&ex.detected_by, &record.detected_by);
         let mut merged_evidence = ex.evidence.clone();
         for (k, v) in &record.evidence {
@@ -955,10 +838,7 @@ impl LopeMemory {
             &Value::Array(merged_detected.iter().cloned().map(Value::String).collect()),
             &pyjson::Opts::default(),
         );
-        let ev_json = pyjson::dumps(
-            &Value::Object(merged_evidence.clone()),
-            &pyjson::Opts::default(),
-        );
+        let ev_json = pyjson::dumps(&Value::Object(merged_evidence.clone()), &pyjson::Opts::default());
 
         conn.execute(
             "UPDATE findings SET message = ?, file = ?, line = ?, end_line = ?, severity = ?, category = ?, confidence = ?, consensus_score = ?, consensus_level = ?, agreement_count = ?, total_validators = ?, detected_by_json = ?, evidence_json = ?, last_seen_at = ?, seen_count = ? WHERE hash = ?",
@@ -1005,12 +885,7 @@ impl LopeMemory {
         payload: &Value,
     ) -> Result<i64, String> {
         let now = now_iso();
-        let sort_opts = pyjson::Opts {
-            indent: None,
-            sort_keys: true,
-            separators: None,
-            ensure_ascii: true,
-        };
+        let sort_opts = pyjson::Opts { indent: None, sort_keys: true, separators: None, ensure_ascii: true };
         let dumped = pyjson::dumps(payload, &sort_opts);
         let redacted = redact_text(&dumped);
         let clean_val = pyjson::loads(&redacted).unwrap_or_else(|_| json!({}));
@@ -1035,16 +910,11 @@ impl LopeMemory {
 
     pub fn gate_sessions(&self, limit: i64) -> Result<Vec<Value>, String> {
         let conn = self.connect()?;
-        let rows = conn.query(
-            "SELECT * FROM gate_sessions ORDER BY created_at DESC LIMIT ?",
-            &[SqlParam::from(limit)],
-        )?;
+        let rows =
+            conn.query("SELECT * FROM gate_sessions ORDER BY created_at DESC LIMIT ?", &[SqlParam::from(limit)])?;
         let mut out = Vec::with_capacity(rows.len());
         for r in rows {
-            let p_str = r
-                .get("payload_json")
-                .and_then(Value::as_str)
-                .unwrap_or("{}");
+            let p_str = r.get("payload_json").and_then(Value::as_str).unwrap_or("{}");
             let payload = pyjson::loads(p_str).unwrap_or_else(|_| json!({}));
             out.push(json!({
                 "id": r.get("id").and_then(Value::as_i64).unwrap_or(0),
@@ -1061,18 +931,9 @@ impl LopeMemory {
         Ok(out)
     }
 
-    pub fn search_findings(
-        &self,
-        query: &str,
-        min_score: f64,
-        limit: i64,
-    ) -> Result<Vec<FindingRecord>, String> {
+    pub fn search_findings(&self, query: &str, min_score: f64, limit: i64) -> Result<Vec<FindingRecord>, String> {
         let trimmed = query.trim();
-        let like = if query.is_empty() {
-            "%".to_string()
-        } else {
-            format!("%{trimmed}%")
-        };
+        let like = if query.is_empty() { "%".to_string() } else { format!("%{trimmed}%") };
         let conn = self.connect()?;
         let rows = conn.query(
             "SELECT * FROM findings WHERE message LIKE ? AND consensus_score >= ? ORDER BY consensus_score DESC, seen_count DESC, last_seen_at DESC LIMIT ?",
@@ -1120,22 +981,15 @@ impl LopeMemory {
         let conn = self.connect()?;
         let scalar = |sql: &str| -> Result<i64, String> {
             let r = conn.query(sql, &[])?;
-            Ok(r.first()
-                .and_then(|m| m.values().next())
-                .and_then(Value::as_i64)
-                .unwrap_or(0))
+            Ok(r.first().and_then(|m| m.values().next()).and_then(Value::as_i64).unwrap_or(0))
         };
         let total = scalar("SELECT COUNT(*) FROM findings")?;
         let sessions = scalar("SELECT COUNT(*) FROM review_sessions")?;
         let gate_sessions = scalar("SELECT COUNT(*) FROM gate_sessions")?;
-        let confirmed =
-            scalar("SELECT COUNT(*) FROM findings WHERE consensus_level = 'confirmed'")?;
+        let confirmed = scalar("SELECT COUNT(*) FROM findings WHERE consensus_level = 'confirmed'")?;
         let recurring = scalar("SELECT COUNT(*) FROM findings WHERE seen_count > 1")?;
         let files = scalar("SELECT COUNT(DISTINCT file) FROM findings WHERE file IS NOT NULL")?;
-        let last_rows = conn.query(
-            "SELECT created_at FROM review_sessions ORDER BY created_at DESC LIMIT 1",
-            &[],
-        )?;
+        let last_rows = conn.query("SELECT created_at FROM review_sessions ORDER BY created_at DESC LIMIT 1", &[])?;
         let last_session_at = last_rows
             .first()
             .and_then(|m| m.get("created_at"))
@@ -1163,14 +1017,8 @@ impl LopeMemory {
         }
         let conn = self.connect()?;
         if let Some(hash_val) = h {
-            conn.execute(
-                "DELETE FROM session_findings WHERE finding_hash = ?",
-                &[SqlParam::from(hash_val)],
-            )?;
-            let (changes, _) = conn.execute(
-                "DELETE FROM findings WHERE hash = ?",
-                &[SqlParam::from(hash_val)],
-            )?;
+            conn.execute("DELETE FROM session_findings WHERE finding_hash = ?", &[SqlParam::from(hash_val)])?;
+            let (changes, _) = conn.execute("DELETE FROM findings WHERE hash = ?", &[SqlParam::from(hash_val)])?;
             Ok(changes)
         } else {
             let file_val = f.unwrap();
@@ -1178,10 +1026,7 @@ impl LopeMemory {
                 "DELETE FROM session_findings WHERE finding_hash IN (SELECT hash FROM findings WHERE file = ?)",
                 &[SqlParam::from(file_val)],
             )?;
-            let (changes, _) = conn.execute(
-                "DELETE FROM findings WHERE file = ?",
-                &[SqlParam::from(file_val)],
-            )?;
+            let (changes, _) = conn.execute("DELETE FROM findings WHERE file = ?", &[SqlParam::from(file_val)])?;
             Ok(changes)
         }
     }
@@ -1196,11 +1041,7 @@ impl LopeMemory {
     pub fn user_version(&self) -> Result<i64, String> {
         let conn = self.connect()?;
         let rows = conn.query("PRAGMA user_version", &[])?;
-        Ok(rows
-            .first()
-            .and_then(|r| r.values().next())
-            .and_then(Value::as_i64)
-            .unwrap_or(0))
+        Ok(rows.first().and_then(|r| r.values().next()).and_then(Value::as_i64).unwrap_or(0))
     }
 
     pub fn store_verdict_event(&self, ev: &VerdictEventInput) -> Result<i64, String> {
@@ -1240,10 +1081,7 @@ impl LopeMemory {
 
     pub fn verdict_events(&self, limit: i64) -> Result<Vec<Map<String, Value>>, String> {
         let conn = self.connect()?;
-        conn.query(
-            "SELECT * FROM verdict_events ORDER BY id DESC LIMIT ?",
-            &[SqlParam::from(limit)],
-        )
+        conn.query("SELECT * FROM verdict_events ORDER BY id DESC LIMIT ?", &[SqlParam::from(limit)])
     }
 }
 
@@ -1274,10 +1112,7 @@ mod tests {
 
     #[test]
     fn memory_round_trip_and_upsert_and_forget() {
-        let path = std::env::temp_dir().join(format!(
-            "lope-memory-test-{}.db",
-            lope_core::time::now()
-        ));
+        let path = std::env::temp_dir().join(format!("lope-memory-test-{}.db", lope_core::time::now()));
         let mem = LopeMemory::open(&path).unwrap();
         let st0 = mem.stats().unwrap();
         assert_eq!(st0["total_findings"], 0);
@@ -1321,25 +1156,11 @@ mod tests {
         f2.consensus_score = 0.95;
         f2.detected_by = vec!["gemini".into()];
         let (_, stored2) = mem
-            .store_review_session(
-                "review src/auth.rs",
-                "security",
-                "src/auth.rs",
-                &["gemini".into()],
-                &[f2],
-                150,
-            )
+            .store_review_session("review src/auth.rs", "security", "src/auth.rs", &["gemini".into()], &[f2], 150)
             .unwrap();
         assert_eq!(stored2[0].seen_count, 2);
         assert_eq!(stored2[0].consensus_level, "confirmed");
-        assert_eq!(
-            stored2[0].detected_by,
-            vec![
-                "claude".to_string(),
-                "codex".to_string(),
-                "gemini".to_string()
-            ]
-        );
+        assert_eq!(stored2[0].detected_by, vec!["claude".to_string(), "codex".to_string(), "gemini".to_string()]);
 
         let found = mem.search_findings("injection", 0.5, 10).unwrap();
         assert_eq!(found.len(), 1);
@@ -1370,10 +1191,7 @@ mod tests {
 
     #[test]
     fn a12_bidirectional_python_rust_and_four_concurrent_writers() {
-        let path = std::env::temp_dir().join(format!(
-            "lope-memory-a12-{}.db",
-            lope_core::time::now()
-        ));
+        let path = std::env::temp_dir().join(format!("lope-memory-a12-{}.db", lope_core::time::now()));
 
         // 1. Rust writes to all 5 tables + 4 concurrent writers.
         let handles: Vec<_> = (0..4)
@@ -1450,7 +1268,19 @@ mod tests {
         let py_script = r#"
 import os, sys, sqlite3
 from pathlib import Path
-sys.path.insert(0, os.path.expanduser("~/.lope"))
+
+repo_root = os.path.abspath(os.path.join(sys.argv[2], "../.."))
+for candidate in (
+    os.environ.get("LOPE_PYTHON_CHECKOUT"),
+    os.environ.get("LOPE_HOME"),
+    repo_root,
+    os.path.expanduser("~/.lope"),
+):
+    if candidate and os.path.isfile(os.path.join(candidate, "lope", "__init__.py")):
+        sys.path.insert(0, candidate)
+        break
+else:
+    sys.path.insert(0, os.path.expanduser("~/.lope"))
 from lope.memory import LopeMemory
 from lope.findings import ConsensusFinding, ConsensusLevel
 
@@ -1512,6 +1342,7 @@ with mem._connect() as conn:
             .arg("-c")
             .arg(py_script)
             .arg(&path)
+            .arg(env!("CARGO_MANIFEST_DIR"))
             .output()
             .expect("run python3");
         assert!(

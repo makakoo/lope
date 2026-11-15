@@ -542,13 +542,53 @@ install_headroom
 
 echo ""
 echo "Verifying lope engine..."
-if [ "${LOPE_PACKAGED_INSTALL:-}" = "1" ]; then
-  if command -v lope >/dev/null 2>&1; then
-    _lope_ver="$(lope --version 2>/dev/null | head -n 1 || true)"
-    echo "  OK — ${_lope_ver:-lope 2.0.0}"
-  else
-    echo "  OK — packaged lope binary"
+LOPE_HAS_NATIVE_V2=0
+_lope_ver=""
+
+verify_native_v2() {
+  local cand="$1"
+  [ -n "$cand" ] && [ -x "$cand" ] || return 1
+  local expected_ver out
+  expected_ver="$(grep -E '^echo "Lope v' "$0" | head -n 1 | sed -E 's/echo "Lope v([^ ]+) .*/\1/' || true)"
+  out="$("$cand" --version 2>/dev/null | head -n 1 || true)"
+  if [ -n "$expected_ver" ]; then
+    case "$out" in
+      "lope $expected_ver"|"lope $expected_ver "*)
+        _lope_ver="$out"
+        return 0
+        ;;
+    esac
+    return 1
   fi
+  if printf '%s\n' "$out" | grep -Eq '^lope 2\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?([[:space:]]|$)'; then
+    _lope_ver="$out"
+    return 0
+  fi
+  return 1
+}
+
+_lope_path_bin="$(command -v lope 2>/dev/null || true)"
+_lope_sibling_bin=""
+if [ -x "$LOPE_DIR/../../bin/lope" ]; then
+  _lope_sibling_bin="$LOPE_DIR/../../bin/lope"
+fi
+
+if verify_native_v2 "${LOPE_BIN:-}" || verify_native_v2 "$_lope_sibling_bin"; then
+  LOPE_HAS_NATIVE_V2=1
+  echo "  OK — $_lope_ver"
+elif [ "${LOPE_PACKAGED_INSTALL:-}" = "1" ]; then
+  # Python wheel (lope-agent) passes LOPE_PACKAGED_INSTALL=1 without LOPE_BIN.
+  if "$PYTHON_BIN" -c "import sys; sys.path.insert(0, sys.argv[1]); import lope; print('  OK — lope v' + lope.__version__)" "$ENGINE_ROOT" 2>/dev/null; then
+    :
+  elif verify_native_v2 "$_lope_path_bin"; then
+    LOPE_HAS_NATIVE_V2=1
+    echo "  OK — $_lope_ver"
+  else
+    echo "  WARNING: no verified lope 2.x binary or importable Python lope package found"
+  fi
+elif verify_native_v2 "$_lope_path_bin"; then
+  LOPE_HAS_NATIVE_V2=1
+  echo "  OK — $_lope_ver"
 elif "$PYTHON_BIN" -c "import sys; sys.path.insert(0, sys.argv[1]); import lope; print('  OK — lope v' + lope.__version__)" "$ENGINE_ROOT" 2>/dev/null; then
   :
 else
@@ -579,7 +619,7 @@ echo "IMPORTANT: Restart your CLI to pick up the new slash commands —"
 echo "every host caches its skill list at session start."
 echo ""
 echo "Next steps:"
-if [ "${LOPE_PACKAGED_INSTALL:-0}" = "1" ]; then
+if [ "$LOPE_HAS_NATIVE_V2" = "1" ] || [ "${LOPE_PACKAGED_INSTALL:-0}" = "1" ]; then
   echo "  1. Configure validators:  lope configure"
   echo "  2. Check status:          lope status"
 else
@@ -591,7 +631,7 @@ if [ "$INSTALL_HEADROOM" = "1" ]; then
 else
   echo "  3. Optional Headroom:     $LOPE_DIR/install --with-headroom"
 fi
-if [ "${LOPE_PACKAGED_INSTALL:-0}" != "1" ]; then
+if [ "$LOPE_HAS_NATIVE_V2" != "1" ] && [ "${LOPE_PACKAGED_INSTALL:-0}" != "1" ]; then
   echo "  4. Alias for convenience: alias lope='PYTHONPATH=$ENGINE_ROOT python3 -m lope'"
 fi
 echo "Existing host files, if any, were preserved under: $LOPE_INSTALL_BACKUP_DIR"

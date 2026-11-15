@@ -289,6 +289,20 @@ def write_brain_journal(
     body = "\n" + "\n".join(lines).rstrip() + "\n"
     with target.open("a", encoding="utf-8") as fh:
         fh.write(body)
+
+    if detection.bin:
+        try:
+            import subprocess
+            subprocess.run(
+                [str(detection.bin), "sync"],
+                check=False,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                timeout=15,
+            )
+        except Exception:
+            pass
+
     return target
 
 

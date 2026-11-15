@@ -4,7 +4,7 @@ You (the AI agent reading this) are going to install lope for your user. **Do no
 
 ## Context
 
-Lope is a multi-CLI validator ensemble for AI work. Any AI CLI drafts; any AI CLI validates. Current command surface as of v0.12.0:
+Lope is a multi-CLI validator ensemble for AI work. Any AI CLI drafts; any AI CLI validates. Current command surface as of v2.0.0 (`compat 0.17.3`):
 
 - **Sprint commands**: `/lope-negotiate`, `/lope-execute`, `/lope-implement`, `/lope-audit`
 - **Single-shot commands**: `/lope-ask`, `/lope-review`, `/lope-vote`, `/lope-compare`, `/lope-pipe`
@@ -16,11 +16,33 @@ Lope is a multi-CLI validator ensemble for AI work. Any AI CLI drafts; any AI CL
 - **Meta and help**: `/lope-help`, `/lope`, `/using-lope`
 - **Terminal maintenance**: `lope update` and `lope upgrade`
 
-Gemini uses the `/lope:<verb>` namespaced form; Codex and Vibe load skills as content and invoke lope via natural language. Source: https://github.com/traylinx/lope (MIT, zero external Python deps, pure stdlib). Git checkout and isolated Python package installations are supported.
+Gemini uses the `/lope:<verb>` namespaced form; Codex and Vibe load skills as content and invoke lope via natural language. Source: https://github.com/makakoo/lope (MIT, native Rust binary on macOS & Linux, with `0.17.3` Python compat rollback). Prebuilt release tarballs, source builds, and legacy Python wheel installs are supported.
 
-## Package installation alternative
+## Prebuilt release & package installation
 
-**Isolated Python package (macOS/Linux):**
+**Prebuilt Rust v2 release tarball (macOS/Linux, recommended):**
+
+Download `lope-<target>.tar.gz` and `lope-<target>.tar.gz.sha256` (or `SHA256SUMS`) from [makakoo/lope releases](https://github.com/makakoo/lope/releases), verify checksum + Sigstore attestation, and run `./install.sh` (installs unprivileged into `$HOME/.local` by default):
+
+```bash
+shasum -a 256 -c lope-<target>.tar.gz.sha256   # Linux: sha256sum -c lope-<target>.tar.gz.sha256
+tar -xzf lope-<target>.tar.gz
+cd lope-<target>
+./install.sh                                    # defaults to --prefix "$HOME/.local"
+export PATH="$HOME/.local/bin:$PATH"            # add ~/.local/bin if not already in PATH
+lope --version
+lope configure
+lope docs
+```
+
+If installing system-wide into `/usr/local`, run the privileged copy with `--skip-install` first, then run `lope install --host all` as your normal user so host skills never land in `/root/`:
+
+```bash
+sudo ./install.sh --prefix /usr/local --skip-install
+lope install --host all
+```
+
+**Legacy Python compatibility package (`0.17.3`, fallback only):**
 
 ```bash
 pipx install lope-agent
@@ -29,13 +51,8 @@ lope configure
 lope docs
 ```
 
-Python 3.9+ and Bash 3.2+ are required for host integration. The wheel includes
-skills, host wrappers, installer, and reference docs. No repository clone is needed.
-For upgrades: `pipx upgrade lope-agent`, then `lope install --host codex`.
-A regular virtualenv can use `python -m pip install lope-agent` and `lope update`.
-Keep an existing Git install if you have local modifications; do not layer a second
-installation over its shell alias/wrapper. Check `command -v lope` before switching.
-Native Windows host installation is not qualified; use a Linux environment.
+Python 3.9+ and Bash 3.2+ are required for host installer hooks and the Python rollback path. Prebuilt GNU/Linux tarballs target `glibc >= 2.35` (`ubuntu-22.04` or newer); older distributions should build from source below. Do not layer two active `lope` binaries on `PATH` without checking `command -v lope`; if keeping `lope-py` for rollback, place `lope` (v2) ahead of `lope-py` on `PATH` or invoke fallback via `LOPE_FORCE_PYTHON=1 lope ...`.
+Native Windows host installation is not qualified; use macOS or Linux.
 
 Existing host files are moved to `${XDG_STATE_HOME:-~/.local/state}/lope/install-backups/`
 before replacement. Backups preserve symlinks as links, not snapshots of their
@@ -43,15 +60,16 @@ external targets. Config, credentials, and runtime history are not rewritten.
 Review and merge your custom skills from the printed backup path; restarting a CLI
 is required to reload skills. Headroom remains optional and off by default.
 
-The remaining steps describe the Git checkout route. Choose one route, not both.
+The remaining steps describe installing from a `v2` Git checkout. Choose one route, not both.
 
-## Prerequisites for the Git route
+## Prerequisites for building from Git checkout
 
 - `git` on `PATH`
-- `python3` >= 3.9 on `PATH`
+- Rust toolchain (`rust-toolchain.toml` pins `1.96.1`)
 - `bash` 3.2+ (stock macOS works)
+- `python3` >= 3.9 only if also running differential parity or Python rollback (`LOPE_FORCE_PYTHON=1`)
 
-Verify with `git --version && python3 --version && bash --version | head -1`. If any are missing, stop and tell the user.
+Verify with `git --version && rustc --version && bash --version | head -1`. If Rust is missing, install via `rustup`.
 
 ---
 
@@ -75,35 +93,30 @@ Verify with `git --version && python3 --version && bash --version | head -1`. If
 
 ---
 
-## Step 1 — Clone or update lope to `~/.lope`
+## Step 1 — Clone, build, and install `makakoo/lope` (`v2`)
 
-If this machine already has Lope, use the self-updater. For very old checkouts that do not have `lope update` yet, fall back to a plain fast-forward git pull once, then future updates use `lope update`.
+Clone `https://github.com/makakoo/lope.git` (or update an existing source checkout), build the native release binary, and install it to `~/.local/bin/lope` (or system-wide via `sudo`):
 
 ```bash
-if [ -d "$HOME/.lope/.git" ]; then
-  if PYTHONPATH="$HOME/.lope" python3 -m lope update --help >/dev/null 2>&1; then
-    PYTHONPATH="$HOME/.lope" python3 -m lope update --skip-install
-  else
-    git -C "$HOME/.lope" fetch --tags origin
-    git -C "$HOME/.lope" pull --ff-only origin main
-  fi
-elif [ -e "$HOME/.lope" ]; then
-  echo "$HOME/.lope exists but is not a Lope git checkout. Move it aside manually, then rerun install." >&2
-  exit 1
-else
-  git clone https://github.com/traylinx/lope.git "$HOME/.lope"
-fi
+git clone -b v2 https://github.com/makakoo/lope.git /path/to/lope
+cd /path/to/lope
+./scripts/cargo build --release
+mkdir -p "$HOME/.local/bin"
+install -m 0755 target/release/lope "$HOME/.local/bin/lope"
+# System-wide alternative: sudo install -m 0755 target/release/lope /usr/local/bin/lope
 ```
 
-If `lope update` fails because the checkout has local tracked edits, stop and show the error. Do not overwrite user changes.
+(If upgrading an existing machine that keeps `$HOME/.lope` for state and skills/rollback, avoid cloning a separate repo over `$HOME/.lope` if you already store `config.json` / `memory.db` there, or keep the source checkout elsewhere and install `lope` + host skills via `lope install`.)
 
 ## Step 2 — Run the bundled installer
 
-The fastest, tested path is the top-level `./install` bash script. It auto-detects which hosts exist on the machine and writes each one's files to the correct native path, with the correct format.
+From the repository checkout (or pass `LOPE_SOURCE_DIR=/path/to/lope` when running from another directory), ensure your install bin dir is on `PATH` and register skills and commands for all detected hosts:
 
 ```bash
-"$HOME/.lope/install"
+LOPE_SOURCE_DIR="$PWD" "$HOME/.local/bin/lope" install --host all
 ```
+
+(For packaged tarball installs built with `./scripts/package-release.sh`, bundled assets live under `<prefix>/share/lope`, so `lope install --host all` works from any working directory without `LOPE_SOURCE_DIR`.)
 
 The installer covers all 8 hosts (claude, codex, gemini, opencode, cursor, vibe, qwen, pi). It writes the standard locations for Claude, Codex, Gemini, OpenCode, and Cursor, and skips Vibe/Qwen/pi when their host homes are absent. Prints which slash commands should be available in which host.
 
@@ -246,35 +259,33 @@ $HOME/.lope/skills/lope-help/SKILL.md
 $HOME/.lope/skills/using-lope/SKILL.md
 ```
 
-Symlink them into your host's native skill path, or copy if symlinks aren't supported, or translate the frontmatter to whatever format your host requires. If you genuinely can't figure out where, file an issue at https://github.com/traylinx/lope/issues with the host name.
+Symlink them into your host's native skill path, or copy if symlinks aren't supported, or translate the frontmatter to whatever format your host requires. If you genuinely can't figure out where, file an issue at https://github.com/makakoo/lope/issues with the host name.
 
 ---
 
-## Step 3 — Verify the engine
+## Step 3 — Verify the binary & config
 
 ```bash
-PYTHONPATH="$HOME/.lope" python3 -m lope version
-PYTHONPATH="$HOME/.lope" python3 -m lope status
+lope --version
+lope status
 ```
 
-`version` prints the banner. `status` lists detected AI CLIs. Either failing means the engine is not importable — report the error.
+`--version` prints `lope 2.0.0 (compat 0.17.3)`. `status` lists detected AI CLIs. Either failing means the binary is not on `PATH` or config is unreadable — report the error.
 
-Future updates are one command:
+To refresh host skills or update the release tarball, re-run `./install.sh --prefix /usr/local` or:
 
 ```bash
-PYTHONPATH="$HOME/.lope" python3 -m lope update
-# or, after you add the alias/wrapper:
-lope update
+lope install --host all
 ```
 
-`lope update` auto-detects the install method. For the normal `~/.lope` git checkout it fetches tags, pulls the explicit tracked remote branch with `--ff-only`, and reruns `./install` so host skills stay current. `lope update --dry-run` previews the commands. `lope update --host <host>` still updates code first, then scopes the installer refresh to that host. If you only want an install-only refresh, run `~/.lope/install --host <host>` directly. `lope upgrade` is kept as a legacy alias. For a virtualenv package, `lope update` upgrades the package and refreshes host files; for pipx use `pipx upgrade lope-agent` followed by `lope install --host <host>`.
+`lope update` / `lope upgrade` delegate to the Python `0.17.3` updater in v2.0.0 for git-backed compatibility installs; for prebuilt native v2 tarballs, download the latest release from `https://github.com/makakoo/lope/releases` and re-run `./install.sh`, or rebuild from the `v2` branch.
 
-## Step 4 — Suggest a shell alias
+## Step 4 — Ensure install bin directory is on `PATH`
 
-Show the user this line and tell them to add it to `~/.zshrc` or `~/.bashrc`:
+If you installed to a custom prefix (for example `$HOME/.local`), make sure `$HOME/.local/bin` is ahead of any legacy wrapper on `PATH` (for example in `~/.zshrc` or `~/.bashrc`):
 
 ```bash
-alias lope='PYTHONPATH=~/.lope python3 -m lope'
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 **Do not edit the user's shell rc yourself without asking.**

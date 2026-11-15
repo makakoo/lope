@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.0.0 — Native Rust CLI (compat 0.17.3)
+
+- **Native Rust CLI & zero-delegation command surface (`lope 2.0.0 (compat 0.17.3)`):** Full workspace rewrite across `lope-core`, `lope-runtime`, `lope-providers`, `lope-engine`, `lope-makakoo`, `lope-compat`, and `lope-cli`, delivering schema parity (`48` commands / `347` arguments), `177/177` golden CLI output parity against Python `0.17.3`, native subcommands (`ask`, `review`, `vote`, `compare`, `pipe`, `negotiate`, `execute`, `implement`, `audit`, `deliberate`, `flow`, `memory`, `gate`, `check`, `team`, `jobs`, `status`, `configure`, `install`, `docs`, `version`), and ~12x faster startup with ~10x smaller memory footprint.
+- **Process supervision & bounded `stderr` hard limit:** Keeps in-memory `stderr` bounded at `512 KiB` head+tail (`BoundedStream`) while introducing a configurable `32 MiB` hard termination cap (`LOPE_STDERR_HARD_LIMIT`), allowing verbose CLIs such as `codex` to stream progress logs over `512 KiB` without false-positive `output_limit` aborts while still terminating runaway floods.
+- **Packaged installer & rollback safety:** `lope install --host <host|all>` embeds packaged asset lookup (`LOPE_SOURCE_DIR`, `<exe_dir>/../share/lope`, `~/.lope`), while `LOPE_FORCE_PYTHON=1` and `/usr/local/bin/lope-py` remain available for instant fallback to the `0.17.3` Python implementation.
+- **Cross-platform POSIX release automation (`makakoo/lope`):** Added multi-target release tarballs (`aarch64-apple-darwin`, `x86_64-apple-darwin`, `x86_64-unknown-linux-gnu`, `aarch64-unknown-linux-gnu`), `SHA256SUMS`, and Sigstore build provenance attestations, alongside synchronized `2.0.0` product / `0.17.3` Python compat version checks.
+
 ## 0.17.3 — Subprocess completion and recoverable output
 
 - Avoid slow process-table subprocesses during macOS cleanup; use kernel process-group existence checks. Retry unknown inspection within the existing deadline and stop signalling after proven absence. Unverified cleanup remains a failure.

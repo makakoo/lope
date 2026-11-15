@@ -27,22 +27,72 @@ SAMPLE_SCENARIO = REPO_ROOT / "tests" / "fixtures" / "scenario.md"
 # ---------------------------------------------------------------------------
 
 
-def _canonical_version() -> str:
-    """The single source of truth: the version in pyproject.toml."""
-    text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
-    for line in text.splitlines():
-        if line.startswith("version = "):
-            return line.split('"')[1]
-    raise AssertionError('no `version = "..."` line in pyproject.toml')
+def _toml_section_version(path: Path, section: str) -> str:
+    """Extract the unique `version = "..."` entry from `[section]` in a TOML file."""
+    text = path.read_text(encoding="utf-8")
+    in_section = False
+    found = []
+    target = f"[{section}]"
+    for raw in text.splitlines():
+        line = raw.strip()
+        if line.startswith("["):
+            in_section = line == target
+            continue
+        if in_section and line.startswith("version = "):
+            parts = line.split('"')
+            assert len(parts) >= 3, f"malformed version line in {path}: {raw!r}"
+            found.append(parts[1])
+    assert len(found) == 1, f"expected 1 version in {path} {target}, found {found!r}"
+    return found[0]
+
+
+def _product_version() -> str:
+    """Canonical Lope v2 product version from Cargo.toml [workspace.package]."""
+    return _toml_section_version(REPO_ROOT / "Cargo.toml", "workspace.package")
+
+
+def _compat_version() -> str:
+    """Canonical legacy Python compatibility package version from pyproject.toml."""
+    return _toml_section_version(REPO_ROOT / "pyproject.toml", "project")
 
 
 def test_version_strings_in_sync():
-    # Read the canonical version dynamically so a release bump never strands
-    # this test on a stale literal — which is exactly what happened at 0.11.0
-    # (three manifests + this test were left pinned to 0.10.7).
     from lope import __version__
 
-    assert __version__ == _canonical_version()
+    product = _product_version()
+    compat = _compat_version()
+    assert product != compat, "product and Python compat versions unexpectedly collapsed"
+
+    # Python compatibility & parity group
+    assert __version__ == compat
+    compat_rust = (REPO_ROOT / "crates" / "lope-core" / "src" / "lib.rs").read_text(encoding="utf-8")
+    assert f'pub const COMPAT_VERSION: &str = "{compat}";' in compat_rust
+    grammar = json.loads(
+        (REPO_ROOT / "crates" / "lope-compat" / "grammar" / "argparse-python-lope.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert grammar["lope_version"] == compat
+
+    # Product v2 group (installer + host extension manifests)
+    install_text = (REPO_ROOT / "install").read_text(encoding="utf-8")
+    banners = [line for line in install_text.splitlines() if line.startswith('echo "Lope v')]
+    assert len(banners) == 1 and banners[0].startswith(f'echo "Lope v{product} '), banners
+
+    for manifest in (
+        ".claude-plugin/plugin.json",
+        ".cursor-plugin/plugin.json",
+        "gemini-extension.json",
+    ):
+        data = json.loads((REPO_ROOT / manifest).read_text(encoding="utf-8"))
+        assert data["version"] == product, f"{manifest} version {data['version']!r} != {product!r}"
+        if manifest != "gemini-extension.json":
+            assert data["homepage"] == "https://github.com/makakoo/lope"
+            assert data["repository"] == "https://github.com/makakoo/lope"
+
+    pyproject_text = (REPO_ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    assert "traylinx/lope" not in pyproject_text
+    assert 'Repository = "https://github.com/makakoo/lope"' in pyproject_text
 
 
 def test_check_version_script_passes():
@@ -53,7 +103,7 @@ def test_check_version_script_passes():
         timeout=20,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
-    assert _canonical_version() in proc.stdout
+    assert f"in sync at {_product_version()} (Python compat pin at {_compat_version()})" in proc.stdout
 
 
 # ---------------------------------------------------------------------------
@@ -84,8 +134,12 @@ def test_required_artifact_exists(relpath):
 
 def test_changelog_lists_latest_at_top():
     text = (REPO_ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
-    head = text.split("\n", 4)
-    assert _canonical_version() in "\n".join(head[:4])
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    assert lines[0] == "# Changelog"
+    product = _product_version()
+    assert lines[1].startswith(f"## {product} — ") or lines[1].startswith(f"## {product} "), (
+        f"top CHANGELOG heading must lead with {product}: {lines[1]!r}"
+    )
 
 
 def test_pyproject_has_no_new_dependency():

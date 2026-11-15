@@ -56,13 +56,29 @@ fn a7_timeout_diag_sidecar_and_python_reads_the_run() {
         assert!(!flat.contains(&format!("\"{k}\":")), "forbidden key {k}");
     }
     // Python reads the run (and the run work dir holds nothing extra)
-    let py = std::process::Command::new("/usr/bin/python3")
+    let py_src = std::env::var("A7_LOPE_SRC")
+        .or_else(|_| std::env::var("LOPE_PYTHON_CHECKOUT"))
+        .ok()
+        .filter(|p| !p.is_empty() && std::path::Path::new(p).join("lope/__init__.py").is_file())
+        .unwrap_or_else(|| {
+            let repo = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+            if repo.join("lope/__init__.py").is_file() {
+                repo.to_string_lossy().into_owned()
+            } else {
+                std::env::var("HOME").map(|h| format!("{h}/.lope")).unwrap_or_default()
+            }
+        });
+    let python = std::env::var("LOPE_PYTHON").ok().filter(|p| !p.trim().is_empty()).unwrap_or_else(|| {
+        if std::path::Path::new("/usr/bin/python3").is_file() {
+            "/usr/bin/python3".to_string()
+        } else {
+            "python3".to_string()
+        }
+    });
+    let py = std::process::Command::new(python)
         .args(["-m", "lope", "jobs", "list", "--json"])
         .env("LOPE_HOME", &home)
-        .env(
-            "PYTHONPATH",
-            std::env::var("A7_LOPE_SRC").unwrap_or_else(|_| format!("{}/.lope", std::env::var("HOME").unwrap())),
-        )
+        .env("PYTHONPATH", py_src)
         .env("PYTHONDONTWRITEBYTECODE", "1")
         .output()
         .unwrap();
