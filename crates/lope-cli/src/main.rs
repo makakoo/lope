@@ -1,4 +1,4 @@
-//! `lope`: Super Lope entry point. Every invocation goes through the strangler
+//! `lope`: Lope v2 entry point. Every invocation goes through the strangler
 //! router (DEC-1); what is not native yet is exec'd into Python Lope.
 
 mod native;

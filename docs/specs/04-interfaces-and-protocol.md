@@ -110,7 +110,7 @@ Both are covered by PM-1 and PM-2.
 - No other keys may be added (DEC-3).
 - The example's validators and primary match the live config's *names*. The provider entries are illustrative; never copy live values into docs (NFR13).
 
-### 4.2 `~/.lope/super-lope/config.toml` (Rust-only; FR7; written only after PL-2)
+### 4.2 `~/.lope/v2/config.toml` (Rust-only; FR7; written only after PL-2)
 
 ```toml
 [completion]
@@ -129,7 +129,7 @@ idle_ttl_seconds = 1800
 max_ptys = 4
 
 [blocker]
-rules_file = "~/.lope/super-lope/blocker-rules.toml"
+rules_file = "~/.lope/v2/blocker-rules.toml"
 ```
 
 ## 5. State contracts
@@ -147,19 +147,19 @@ rules_file = "~/.lope/super-lope/blocker-rules.toml"
 ## 7. S9 daemon protocol (deferred)
 
 The protocol is defined at the start of S9, if OQ-4 approves S9. Fixed constraints:
-- Line-delimited JSON over a Unix socket under `~/.lope/super-lope/run/`.
+- Line-delimited JSON over a Unix socket under `~/.lope/v2/run/`.
 - Peer-UID check.
 - One method set defined in one place.
 - Callers fall back to T2 when the socket is absent.
 
 ## 8. Cross-repo patch sets
 
-These ship through their own repositories. Super Lope sprints track them but never edit those repos.
+These ship through their own repositories. Lope v2 sprints track them but never edit those repos.
 
 | ID | Repo | Change | Needed by |
 |---|---|---|---|
 | **PL-1** | `~/.lope` | Commit and tag the current 0.17.3 working tree (or discard it); that tag is the parity baseline | S0 pre-flight |
-| **PL-2** | `~/.lope` | Add `super-lope/` to `.gitignore` | before any write to `~/.lope/super-lope/` |
+| **PL-2** | `~/.lope` | Add `v2/` to `.gitignore` | before any write to `~/.lope/v2/` |
 | **PL-3** | `~/.lope` | Replace `PYTHONPATH=~/.lope python3 -m lope` with `lope` in 7 SKILL.md files (`lope, lope-audit, lope-execute, lope-help, lope-negotiate, lope-team, using-lope`) and 7 `commands/` files; re-sync the 6 stale Codex copies | S8 |
 | **PL-4** (optional) | `~/.lope` | Land the WIP completion fix in Python as well | anytime |
 | **PL-5** | `~/.lope` | Fix `jobs.py:507-522` `is_owned_path`: the ancestor walk compares the *unresolved* path against the *resolved* root, so it never stops at the root and meets any symlinked ancestor (e.g. macOS `/var` → `/private/var`). Every owned path is then rejected, and each run with validator calls exits 1 with "owned scratch cleanup failure". Fix: walk the resolved path, or resolve the root's ancestors consistently. Found in S0 (`tools/parity` case `symlinked-lope-home-closeout-bug`). Rust must decide in S1/S2 whether to reproduce or fix it (DEC needed). | anytime; affects anyone whose `LOPE_HOME` has a symlinked ancestor |

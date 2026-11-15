@@ -47,6 +47,6 @@ fn main() {
         xs[n - 1]
     );
     println!("  calls over 0.7 s (Python's budget, would be UNVERIFIED): {}", over(0.7));
-    println!("  calls over 2.0 s (Super Lope default budget): {}", over(2.0));
+    println!("  calls over 2.0 s (Lope v2 default budget): {}", over(2.0));
     println!("  outcomes: {outcomes:?}");
 }

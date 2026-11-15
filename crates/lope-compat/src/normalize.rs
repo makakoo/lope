@@ -224,7 +224,7 @@ fn consensus_quorum(args: &mut Vec<OsString>, spec: &'static CommandSpec) -> Res
                 prog: "lope review".into(),
                 message: format!(
                     "--consensus {mode} is not supported; use --consensus or --consensus quorum \
-                     (the meaning of '{mode}' is undecided, see super-lope OQ-1)"
+                     (the meaning of '{mode}' is undecided, see Lope v2 OQ-1)"
                 ),
             });
         }

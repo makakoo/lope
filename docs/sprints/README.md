@@ -1,6 +1,6 @@
-# Super Lope — Sprint roadmap (S0–S9)
+# Lope v2 — Sprint roadmap (S0–S9)
 
-[Root](../../README.md) · [Master sprint](../../SPRINT-SUPER-LOPE-V1.md) · [Audits](../audits/README.md) · [Specs](../specs/README.md) · **Sprints**
+[Root](../../README.md) · [Master sprint](../../SPRINT-LOPE-V2.md) · [Audits](../audits/README.md) · [Specs](../specs/README.md) · **Sprints**
 
 Plan revision 2 is a **strangler** sequence (DEC-1):
 - From S0, the Rust binary routes every invocation, executing natively what is ported and delegating the rest to Python Lope.

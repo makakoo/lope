@@ -1,4 +1,4 @@
-# Handoff — Super Lope (2026-11-14)
+# Handoff — Lope v2 (2026-11-14)
 
 **Status:** S0–S6 verified complete. S7 and S8 code landed at commit `0cc251b` (`S8: install, docs, release binary cutover, benchmarks, and evidence`), **but cutover closeout is NOT complete.** S7 parity defects, S8 doc/install hygiene issues, cross-repo patches, and live `A17` / `M1–M8` acceptance verification remain open and are tracked in [S8B — Remediation & Cutover Closeout](S8B-remediation-and-cutover-closeout.md).
 
@@ -8,11 +8,11 @@
 
 | Location | State (`2026-11-14`) | Notes |
 |---|---|---|
-| `/Users/sebastian/projects/apps/super-lope` | Clean at `0cc251b` | Rust release + debug builds pass unit/partial parity tests, but `s7-sprint-flow.json` and `s0-delegation.json` were relaxed/trimmed during S7 |
-| `/usr/local/bin/lope` | Rust `2.0.0 (super-lope; compat 0.17.3)` | Live default binary (`~/bin/lope` retargeted; `~/.zshrc:178` alias removed) |
+| `/Users/sebastian/projects/lope` | Clean at `0cc251b` | Rust release + debug builds pass unit/partial parity tests, but `s7-sprint-flow.json` and `s0-delegation.json` were relaxed/trimmed during S7 |
+| `/usr/local/bin/lope` | Rust `2.0.0 (compat 0.17.3)` | Live default binary (`~/bin/lope` retargeted; `~/.zshrc:178` alias removed) |
 | `/usr/local/bin/lope-py` | Python `0.17.3` shim | Intact rollback target (`LOPE_FORCE_PYTHON=1` also routes to Python) |
 | `/Users/sebastian/.bashrc` | **Patch `PH-1` incomplete** | Line 33 still sets `alias lope='PYTHONPATH=/Users/sebastian/.lope python3 -m lope'` |
-| `/Users/sebastian/.lope` | Clean baseline (`9cffa55`, tag `super-lope-baseline-0.17.3`) + local uncommitted mods | `PL-2` (`~/.lope/.gitignore` `super-lope/`) and `PL-3` (`skills/` & `commands/` rewrite to `lope`) still unapplied |
+| `/Users/sebastian/.lope` | Clean baseline (`9cffa55`, tag `super-lope-baseline-0.17.3`) + local uncommitted mods | `PL-2` (`~/.lope/.gitignore` `v2/`) and `PL-3` (`skills/` & `commands/` rewrite to `lope`) still unapplied |
 | `/Users/sebastian/projects/apps/makakoo-jungle` | Clean at `8a541055` | `PG-1..PG-8` unapplied (`bin/glimmer`, `lib/companion/server.js`, `council-runner.ts`, `plan-build.ts`, `jobs.js`, etc.) |
 | `/Users/sebastian/projects/apps/makakoo-os` | Clean at `2e1bfe7` | `PM-2` unapplied in `makakoo/src/commands/setup/lope.rs`; `PM-1` deferred per DEC-8 |
 | `/Users/sebastian/MAKAKOO` | Active Makakoo workspace | `PM-3` unapplied in `AGENTS.md:100` (`PYTHONPATH=~/.lope python3 -m lope configure`) |

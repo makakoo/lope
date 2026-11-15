@@ -33,7 +33,7 @@ fixtures = {} if "a3" not in SECTIONS else {
                                               "timestamp": 1794057125.7847402, "source_cli": "codex", "confidence": 0.9}},
              "run_timeout": 1200, "allow_unbounded_run": True, "max_calls": 7, "max_input_bytes": 1000, "max_output_bytes": 2000,
              "request_policy": "chunk", "max_chunks": 3},
-    "unknown_keys_dropped": {"version": 1, "validators": [], "primary": "", "super_lope": {"x": 1}, "zzz": True},
+    "unknown_keys_dropped": {"version": 1, "validators": [], "primary": "", "lope_v2": {"x": 1}, "zzz": True},
     "bool_as_int": {"version": True, "validators": [1, "b"], "primary": "", "timeout": True, "max_calls": True},
     "defaults_omitted": {"version": 1, "validators": [], "primary": "", "max_calls": 96, "max_chunks": 32, "request_policy": "auto",
                          "allow_unbounded_run": False, "run_timeout": None},
@@ -134,7 +134,7 @@ for p in dead:
 
 py_rows, rs_rows = py.list_active(), rs("list")
 check(normal(py_rows) == normal(rs_rows), "A4 list: Rust and Python list each other's manifests identically (%d rows)" % len(py_rows))
-check(any(r.get("super_lope") for r in py_rows), "A4 extra fields: Python lists a manifest carrying Rust-only fields")
+check(any(r.get("lope_v2") for r in py_rows), "A4 extra fields: Python lists a manifest carrying Rust-only fields")
 py_dry = py.reap_all(dry_run=True)
 rs_dry = rs("reap", "--dry-run")
 check(normal(py_dry) == normal(rs_dry), "A4 reap --dry-run: identical plans")

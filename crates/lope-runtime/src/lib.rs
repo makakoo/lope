@@ -19,7 +19,7 @@ pub mod supervisor;
 /// empty. Python uses 0.7 s; see DEC-4 and docs/evidence/s2-runtime.txt.
 pub const DEFAULT_CLEANUP_BUDGET_SECONDS: f64 = 2.0;
 
-/// `LOPE_CLEANUP_BUDGET_SECONDS` (additive, Super Lope only) or the default.
+/// `LOPE_CLEANUP_BUDGET_SECONDS` (additive, Lope v2 only) or the default.
 pub fn cleanup_budget() -> f64 {
     std::env::var("LOPE_CLEANUP_BUDGET_SECONDS")
         .ok()

@@ -102,7 +102,7 @@ def main():
     compare(py, rs, "lope", diffs)
     allowed = {(e["path"], e["field"]) for e in allow}
     failing = [d for d in diffs if (d[0], d[1]) not in allowed]
-    print("python-lope %s (argparse) vs super-lope clap grammar (captured from %s)"
+    print("python-lope %s (argparse) vs lope v2 clap grammar (captured from %s)"
           % (py_doc["lope_version"], rs_doc.get("grammar_lope_version")))
 
     def count(p):

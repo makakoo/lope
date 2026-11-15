@@ -2,7 +2,7 @@
 
 /// Python Lope's boolean env rule: `value.lower() in ("1", "true", "yes", "on")`
 /// (`config.py:210`). Surrounding whitespace is ignored here; Python's
-/// call sites differ on that, and these flags are Super Lope's own.
+/// call sites differ on that, and these flags are Lope v2's own.
 pub fn truthy(value: Option<&str>) -> bool {
     match value {
         Some(v) => matches!(v.trim().to_ascii_lowercase().as_str(), "1" | "true" | "yes" | "on"),

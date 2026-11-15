@@ -4,7 +4,7 @@
 
 ## 1. Product
 
-Super Lope is a Rust implementation of the `lope` CLI. It is a **behavioural drop-in** for Python Lope at the pinned commit (see [PL-1](04-interfaces-and-protocol.md#8-cross-repo-patch-sets)) for every caller listed in [Audit 03](../audits/03-makakoo-and-glimmer-seams-audit.md).
+Lope v2 is a Rust implementation of the `lope` CLI. It is a **behavioural drop-in** for Python Lope at the pinned commit (see [PL-1](04-interfaces-and-protocol.md#8-cross-repo-patch-sets)) for every caller listed in [Audit 03](../audits/03-makakoo-and-glimmer-seams-audit.md).
 
 Success means three things:
 1. Every caller works unchanged, or with the explicit patch sets in Spec 04 §8.
@@ -32,11 +32,11 @@ Lope's protocols (verdict blocks, consensus scoring, deliberation, sprint, flow)
 ## 3. Workspace layout
 
 ```text
-super-lope/
+v2/
 ├── Cargo.toml                  workspace; deps aligned with makakoo-os where shared
 ├── rust-toolchain.toml         pinned; build scripts call rustup's cargo (Homebrew cargo 1.89 shadows it)
 ├── crates/
-│   ├── lope-core/              paths ($LOPE_HOME), config.json (Python format) + super-lope config.toml,
+│   ├── lope-core/              paths ($LOPE_HOME), config.json (Python format) + Lope v2 config.toml,
 │   │                           models, redaction, verdict parser/repair prompts, exit codes, env registry
 │   ├── lope-state/             runs/ registry + manifests, run.lock, latency.json, trusted_gates.json,
 │   │                           audit journal, heal journal
@@ -109,7 +109,7 @@ Crossterm and ratatui are needed only if a TUI is ever built (L6).
 |---|---|---|---|
 | **T1 — HTTP in-process** | `"type": "http"` providers, `--from-curl` providers | Shared `reqwest::Client` (rustls). `{prompt}` is substituted by walking the JSON value, never by string concatenation. `${ENV}` is expanded in headers/body as Python does. Response is extracted via `response_path`. No child processes. | S3 |
 | **T2 — Supervised one-shot (pipes)** | All CLI validators: built-ins, presets, subprocess providers, `makakoo adapter call` | Command plus args (no shell), in a new session and process group. Prompt goes on stdin then stdin is closed, or in argv, or in a 0600 temp file, exactly as Python's adapter specifies. Stdout and stderr are captured separately with bounded head+tail (2 MiB / 512 KiB). Deadline. Completion policy in §7. | S2 |
-| **T3 — Warm PTY pool** | Opt-in per provider (`super-lope/config.toml`) for interactive TUIs only | `loped`, PTY + `ghostty-vt`, Herdr detection plus the stabiliser, blocker policy with Lope-authored rules and keys. | S9 (gated, OQ-4) |
+| **T3 — Warm PTY pool** | Opt-in per provider (`v2/config.toml`) for interactive TUIs only | `loped`, PTY + `ghostty-vt`, Herdr detection plus the stabiliser, blocker policy with Lope-authored rules and keys. | S9 (gated, OQ-4) |
 
 There is no tier that runs `--print`/`exec` CLIs under a PTY (DEC-2).
 
@@ -125,7 +125,7 @@ The coverage table (`crates/lope-compat/src/coverage.rs`) is the single place th
 
 ## 6. Herdr reuse: what is taken and what is not
 
-See the [Audit 02 §7](../audits/02-herdr-rust-audit.md#7-what-super-lope-should-take-feeds-spec-01-6) decision table. In short:
+See the [Audit 02 §7](../audits/02-herdr-rust-audit.md#7-what-Lope v2-should-take-feeds-spec-01-6) decision table. In short:
 - **S9 only, feature-gated:** the detection matcher and manifests, the stabiliser, `ghostty-vt` + `libghostty-vt`, and `portable-pty`.
 - **Re-implemented, not extracted:** the PTY actor and the socket server.
 - **Not in v2.0:** remote SSH and the UI stack.
@@ -151,7 +151,7 @@ For every T2 call:
 
 6. Write the cleanup result to the call manifest (fields allowed by NFR5).
 
-Fail-open acceptance is available only through an explicit setting in `super-lope/config.toml` (OQ-6).
+Fail-open acceptance is available only through an explicit setting in `v2/config.toml` (OQ-6).
 
 ## 8. Security and privacy
 
@@ -159,7 +159,7 @@ Fail-open acceptance is available only through an explicit setting in `super-lop
 - **Redaction** ports `redaction.py` exactly (`:20-36`): PEM private-key blocks, `sk-…`, `gh[pousr]_…`, `Bearer …`, and `api_key|x-api-key|authorization|token|access_token|secret` assignments. It applies before anything reaches stdout, files, `memory.db`, the Brain or SARIF. Any additional patterns are additive and listed in FR26.
 - **Manifest privacy:** `_FORBIDDEN_MANIFEST_KEYS` (10 keys, NFR5).
 - **Temp files:** 0600 files, 0700 directories, removed on drop, panic or cancellation.
-- **`~/.lope` stays a clean git tree.** Rust writes only to paths already in `~/.lope/.gitignore`. Its own directory `~/.lope/super-lope/` may be written only after PL-2 adds it to `.gitignore` (NFR7).
+- **`~/.lope` stays a clean git tree.** Rust writes only to paths already in `~/.lope/.gitignore`. Its own directory `~/.lope/v2/` may be written only after PL-2 adds it to `.gitignore` (NFR7).
 - **S9 socket:** directory 0700, socket 0600, **plus** a `getpeereid` UID check. This is new code; Herdr has no peer-UID check.
 
 ## 9. Build

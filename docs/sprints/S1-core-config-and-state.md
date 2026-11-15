@@ -15,7 +15,7 @@ Port the state layer exactly, so that Rust and Python share `~/.lope` safely, an
 1. **`lope-core`:**
    - `$LOPE_HOME` paths;
    - `config.json` load, layering and env overrides, plus `save()` with Python semantics (FR6);
-   - `super-lope/config.toml` reader with defaults only (FR7; nothing is written before PL-2);
+   - `v2/config.toml` reader with defaults only (FR7; nothing is written before PL-2);
    - `redaction.py` port (FR26);
    - verdict-block parser (FR25; repair prompts come in S4).
 2. **`lope-state`:**

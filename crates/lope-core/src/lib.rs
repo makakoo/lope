@@ -24,7 +24,7 @@ pub const COMPAT_VERSION: &str = "0.17.3";
 /// The line `lope version` prints (FR2). The first `N.N[.N]` on stdout must be
 /// the product version, so nothing version-like may precede it.
 pub fn version_line() -> String {
-    format!("lope {PRODUCT_VERSION} (super-lope; compat {COMPAT_VERSION})")
+    format!("lope {PRODUCT_VERSION} (compat {COMPAT_VERSION})")
 }
 
 /// Lowercase hex SHA-256 of `bytes`.

@@ -23,7 +23,7 @@ An opt-in Tier 3: warm interactive agent panes in `loped` for providers that req
    - the Herdr detection matcher and manifests, with stubs for `platform` and `config`;
    - a port of the pane-layer stabiliser (`src/pane/agent_detection.rs`).
 3. **`lope-daemon` / `loped`** (FR40):
-   - socket under `~/.lope/super-lope/run/` (needs PL-2);
+   - socket under `~/.lope/v2/run/` (needs PL-2);
    - `getpeereid` UID check;
    - protocol defined in one place (Spec 04 §7);
    - launchd `com.makakoo.lope` with the NFR16 environment, or a Makakoo service plugin (PM-8).

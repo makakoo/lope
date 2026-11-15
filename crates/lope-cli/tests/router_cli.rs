@@ -76,7 +76,7 @@ fn a1_version_forms_are_native_and_glimmer_parsable() {
         let o = lope(form, &[("LOPE_PYTHON", "/nonexistent/python")]);
         assert_eq!(o.status.code(), Some(0), "{form:?}: {}", stderr(&o));
         assert_eq!(first_version(&stdout(&o)).as_deref(), Some(env!("CARGO_PKG_VERSION")), "{form:?}");
-        assert_eq!(stdout(&o), format!("lope {} (super-lope; compat 0.17.3)\n", env!("CARGO_PKG_VERSION")));
+        assert_eq!(stdout(&o), format!("lope {} (compat 0.17.3)\n", env!("CARGO_PKG_VERSION")));
         assert!(o.stderr.is_empty());
     }
 }

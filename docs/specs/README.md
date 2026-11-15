@@ -1,8 +1,8 @@
-# Super Lope — Specifications
+# Lope v2 — Specifications
 
 [Root](../../README.md) · [Audits](../audits/README.md) · **Specs** · [Sprints](../sprints/README.md)
 
-Plan revision 2. These four documents define what Super Lope must do. Every behaviour labelled *parity* is defined by Python Lope as captured in [`docs/reference/`](../reference/). Behaviour beyond parity is labelled *additive* or *deviation* and traced to a decision below.
+Plan revision 2. These four documents define what Lope v2 must do. Every behaviour labelled *parity* is defined by Python Lope as captured in [`docs/reference/`](../reference/). Behaviour beyond parity is labelled *additive* or *deviation* and traced to a decision below.
 
 | # | Document | Defines |
 |---|---|---|
@@ -36,7 +36,7 @@ Each decision exists because a verified fact forced a choice. They can be revisi
 |---|---|---|---|
 | **DEC-1** | **Strangler cutover.** The Rust `lope` routes each invocation natively only when its verb *and* flag set are ported; otherwise it execs Python Lope with argv, env, cwd, stdio and exit status preserved. | Revision 1 left Glimmer-critical verbs non-functional until S4/S7 and cut everything over in one step. | FR5, A2, all sprints |
 | **DEC-2** | **One-shot CLI validators run over pipes**, not a PTY: stdin delivered then closed, separate stdout/stderr. A PTY is used only by the opt-in warm pool (S9). | Herdr manifests are interactive-only, and unmatched means Idle (Audit 02 §2). A PTY merges streams, wraps or mangles JSON, and changes CLI behaviour. claude and codex read stdin to EOF. | FR10, FR14, FR41 |
-| **DEC-3** | `config.json` stays in Python's format: `"version": 1`, Python's keys only, written with Python's lock and rename semantics. Rust-only settings live in `~/.lope/super-lope/config.toml`. | Python ignores configs without `version: 1` and drops unknown keys on save (`config.py:80, 394-433`). Makakoo `onboarding.py` also writes `config.json`. | FR6, FR7, NFR6 |
+| **DEC-3** | `config.json` stays in Python's format: `"version": 1`, Python's keys only, written with Python's lock and rename semantics. Rust-only settings live in `~/.lope/v2/config.toml`. | Python ignores configs without `version: 1` and drops unknown keys on save (`config.py:80, 394-433`). Makakoo `onboarding.py` also writes `config.json`. | FR6, FR7, NFR6 |
 | **DEC-4** | **Completion policy stays fail-closed by default** (Python WIP semantics). Kill the process group, then confirm it is empty within a longer asynchronous budget. If descendants survive, mark the call `UNVERIFIED` with metadata; output is returned only under `LOPE_RECOVER_UNVERIFIED_OUTPUT=1`. Accepting answers despite live descendants is an explicit opt-in. | The WIP deliberately fails closed (`output.py:54`, CHANGELOG). Revision 1's "always accept" silently reversed a safety policy. | FR11 |
 | **DEC-5** | `ghostty-vt`, `portable-pty` and Herdr detection sit behind cargo feature `pty-pool`, **off by default**. The default build needs only cargo. | `ghostty-vt` needs Zig 0.16 and a network fetch (Audit 02 §1). | NFR1, S9 |
 | **DEC-6** | State paths and schemas are unchanged: `~/.lope/runs/`, `memory.db` (same tables, `user_version = 1`, `LIKE` search), `run.lock`, `journal/`, `latency.json`, `trusted_gates.json`. | Rollback to Python at any sprint boundary (NFR6). | FR8, FR9, FR27 |
@@ -51,8 +51,8 @@ Each decision exists because a verified fact forced a choice. They can be revisi
 | ID | Question | Default until answered |
 |---|---|---|
 | **OQ-1** | Meaning of `--consensus unanimous` and `--consensus any`. Nothing in Python or Glimmer defines them. | Rejected with exit 2; only `quorum` is accepted. |
-| **OQ-2** | Distribution: does the Rust binary replace Python in `traylinx/lope`, or ship from a new repo or Homebrew formula? What happens to the pip package `lope-agent` and to `lope update --method git\|pip`? | `update`/`upgrade` stay delegated to Python until decided. |
-| **OQ-3** | Version string: `2.0.0` or continue `0.18.x`? | `lope 2.0.0 (super-lope; compat 0.17.3)` |
+| **OQ-2** | Distribution: Rust Lope 2.0 lives in **`makakoo/lope` (`v2` branch)** while `traylinx/lope` stays intact as legacy Python v0.x. Homebrew / native `lope update` mechanics follow after S8B closeout. | Decided (`makakoo/lope`, 2026-11-15); `update`/`upgrade` stay delegated until native updater ships. |
+| **OQ-3** | Version string: `2.0.0` or continue `0.18.x`? | `lope 2.0.0 (compat 0.17.3)` |
 | **OQ-4** | Should S9 (PTY warm pool, blocker policy, daemon) happen at all? | Decided by FR12 timeout diagnostics from at least 7 days of dogfooding native `review`/`ask` (available from S4). |
 | **OQ-5** | Is the DEC-10 journal deviation (UTC → local date) acceptable? | Adopt local date. |
 | **OQ-6** | DEC-4: does any caller want fail-open completion by default? | Fail-closed. |

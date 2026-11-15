@@ -17,7 +17,7 @@
   - No new global options (a global `-c/--config` would collide with `check`/`gate --config`).
   - Help text need not be byte-identical, with one exception: `review --help` must list `--consensus --format --focus --brain-context` (a Glimmer test checks this).
 - **FR2 — Version (parity + additive).**
-  - `lope version` exits 0, and the first match of `/v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)/` on stdout is the product version (OQ-3; default `lope 2.0.0 (super-lope; compat 0.17.3)`).
+  - `lope version` exits 0, and the first match of `/v?([0-9]+\.[0-9]+(?:\.[0-9]+)?)/` on stdout is the product version (OQ-3; default `lope 2.0.0 (compat 0.17.3)`).
   - Nothing that looks like a version may print earlier on stdout.
   - Additive: `lope --version` and `lope -V` print the same thing.
   - Completes in under 5 s under the launchd environment (Glimmer's companion timeout).
@@ -40,7 +40,7 @@
   - Write only Python's recognised keys, omitting defaults as Python does, with exclusive `flock` on `config.json.lock`, then tmp, fsync and rename.
   - `validators` stays a list. Honour `LOPE_HOME`.
 - **FR7 — Rust-only settings (additive, DEC-3).**
-  - Optional `~/.lope/super-lope/config.toml` holds: completion cleanup budget, fail-open opt-in, the S9 pool, blocker and PTY settings, and per-provider tier opt-in.
+  - Optional `~/.lope/v2/config.toml` holds: completion cleanup budget, fail-open opt-in, the S9 pool, blocker and PTY settings, and per-provider tier opt-in.
   - The file is never written before PL-2 lands.
   - Absent file means defaults.
 - **FR8 — Run registry (parity).**
@@ -169,12 +169,12 @@
   - `--host {claude,codex,gemini,opencode,cursor,vibe,qwen,pi,all}` produces the same artifacts as `~/.lope/install`, including gemini `commands/lope`, skills and commands.
   - Shipped skill and command content invokes `lope …`, never `python3 -m lope` (PL-3).
 - **FR38 — `update`/`upgrade`.** Delegated to Python until OQ-2 is decided. Once decided, native with the same flags (`--dry-run --method --host --skip-install --allow-dirty`), or with documented replacements.
-- **FR39 — `docs`.** Prints the complete reference documentation, updated for Super Lope v2.0. By default `lope docs` prints the updated embedded Super Lope reference (not shadowed silently by legacy `$HOME/.lope/docs/reference.md` unless an explicit override such as `LOPE_DOCS_PATH` or `LOPE_FORCE_PYTHON=1` is set). Parity checks validate exit code `0`, document structure, and Super Lope v2.0 coverage rather than freezing prose at Python `0.17.3`.
+- **FR39 — `docs`.** Prints the complete reference documentation, updated for Lope v2 v2.0. By default `lope docs` prints the updated embedded Lope v2 reference (not shadowed silently by legacy `$HOME/.lope/docs/reference.md` unless an explicit override such as `LOPE_DOCS_PATH` or `LOPE_FORCE_PYTHON=1` is set). Parity checks validate exit code `0`, document structure, and Lope v2 v2.0 coverage rather than freezing prose at Python `0.17.3`.
 
 ### 1.8 Post-cutover, gated by OQ-4 (FR40–FR43, S9)
 
 - **FR40 — `loped` daemon.**
-  - Socket under `~/.lope/super-lope/run/` (directory 0700, socket 0600), plus a `getpeereid` UID check (new code).
+  - Socket under `~/.lope/v2/run/` (directory 0700, socket 0600), plus a `getpeereid` UID check (new code).
   - Runs as launchd `com.makakoo.lope`, or as a Makakoo `kind="service"` plugin, with the environment required by NFR16.
 - **FR41 — Warm PTY pool.**
   - Only for providers that opt in. PTY + `ghostty-vt` (feature `pty-pool`).
@@ -200,12 +200,12 @@
 - **NFR4 — No shell for validators.** Gate commands and flow `script` nodes follow Python's execution model and trust rules.
 - **NFR5 — Manifest privacy.** None of `prompt, prompt_text, response, response_body, raw_response, secret, credentials, argv, environment, env` may appear in manifests (`jobs.py:37-48`). Diagnostic tails live only in 0600 `.diag` files.
 - **NFR6 — Rollback safety.** At every sprint boundary, Python Lope operates correctly on everything Rust wrote: `config.json`, `memory.db` (`user_version` stays 1), `runs/`, `journal/`, `latency.json`, `trusted_gates.json`.
-- **NFR7 — `~/.lope` stays a clean git tree.** Rust creates nothing untracked outside gitignored paths. `~/.lope/super-lope/` is used only after PL-2.
+- **NFR7 — `~/.lope` stays a clean git tree.** Rust creates nothing untracked outside gitignored paths. `~/.lope/v2/` is used only after PL-2.
 - **NFR8 — Atomic writes.** `config.json` follows Python's sidecar lock + tmp + fsync + rename. Reports written with `--output` are written atomically.
 - **NFR9 — SQLite.** Bundled SQLite; WAL; `synchronous=NORMAL`; a 5 s busy timeout. Four concurrent writers produce no `database is locked`.
 - **NFR10 — Deterministic offline tests.** A1–A16 run offline with mock CLIs, a mock HTTP server and a fake `makakoo` binary.
 - **NFR11 — Platform isolation.** OS-specific code lives only in `lope-runtime::platform::{macos,linux}` (and `lope-daemon` for S9).
-- **NFR12 — Licensing.** Super Lope is MIT (like Lope and Makakoo). Herdr-derived files carry Apache-2.0 attribution in a `NOTICE` plus modified-file notes. `vendor/portable-pty` and `libghostty-vt` keep their MIT `LICENSE` files. Do not describe the project as "clean-room".
+- **NFR12 — Licensing.** Lope v2 is MIT (like Lope and Makakoo). Herdr-derived files carry Apache-2.0 attribution in a `NOTICE` plus modified-file notes. `vendor/portable-pty` and `libghostty-vt` keep their MIT `LICENSE` files. Do not describe the project as "clean-room".
 - **NFR13 — Evidence hygiene.** No secrets and no raw `config.json` values in `docs/evidence/`.
 - **NFR14 — Parity harness.**
   - `tools/parity` dumps Python's argparse tree (by walking `_actions`) and the Rust clap tree to JSON and diffs them.

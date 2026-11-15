@@ -25,7 +25,7 @@ fn main() {
         }
         "extra" => r
             .update(&a[1], |m| {
-                m.insert("super_lope".into(), json!({"diag_path": "x.diag", "cleanup_budget_s": 2.0}));
+                m.insert("lope_v2".into(), json!({"diag_path": "x.diag", "cleanup_budget_s": 2.0}));
                 Ok(())
             })
             .unwrap(),

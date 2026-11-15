@@ -6,7 +6,18 @@
 # Usage: tools/parity/glimmer-baseline [OUTFILE]
 set -eu
 here=$(cd "$(dirname "$0")" && pwd)
-jungle=${GLIMMER_REPO:-$(cd "$here/../../../makakoo-jungle" && pwd)}
+if [ -n "${GLIMMER_REPO:-}" ]; then
+  jungle=$GLIMMER_REPO
+elif [ -d "$here/../../apps/makakoo-jungle" ]; then
+  jungle=$(cd "$here/../../apps/makakoo-jungle" && pwd)
+elif [ -d "$here/../../../makakoo-jungle" ]; then
+  jungle=$(cd "$here/../../../makakoo-jungle" && pwd)
+elif [ -d "$here/../../makakoo-jungle" ]; then
+  jungle=$(cd "$here/../../makakoo-jungle" && pwd)
+else
+  echo "glimmer-baseline: cannot locate makakoo-jungle (set GLIMMER_REPO)" >&2
+  exit 1
+fi
 out=${1:-$here/out/glimmer-baseline.txt}
 sandbox=$(/usr/bin/python3 -c 'import os,tempfile; print(os.path.realpath(tempfile.mkdtemp(prefix="glimmer-baseline-")))')
 trap 'rm -rf "$sandbox"' EXIT

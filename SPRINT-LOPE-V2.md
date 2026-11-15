@@ -1,4 +1,4 @@
-# SPRINT-SUPER-LOPE-V1
+# SPRINT-LOPE-V2
 
 [Root](README.md) · [Audits](docs/audits/README.md) · [Specs](docs/specs/README.md) · [Sprints](docs/sprints/README.md)
 
@@ -157,7 +157,7 @@ Plan revision 2 (2026-11-07). Deliver a Rust `lope` that is a behavioural drop-i
 
 - Required before marking S7/S8 closed or evaluating S9 (`OQ-4`)
 - Fixes S7 parity defects (`CallContext.implementation = true` for writers, untrusted gate exit `3`, `execute --manual` non-TTY EOF exit `3`, `implement --interactive`, `negotiate` progress + `.feedback.md`/`.rounds/`, strict `golden_run`, `SelfHealer` wiring, `LOPE_FLOW_WORKERS`)
-- Fixes S8 hygiene (`install.rs` / `s8_cutover_parity.rs` hardcoded path removal, `FR39` Super Lope `reference.md` + `docs.rs` shadowing fix)
+- Fixes S8 hygiene (`install.rs` / `s8_cutover_parity.rs` hardcoded path removal, `FR39` Lope v2 `reference.md` + `docs.rs` shadowing fix)
 - Applies pending cross-repo patches (`PH-1` `~/.bashrc`, `PL-2`/`PL-3` `~/.lope`, `PG-1..PG-8` `makakoo-jungle`, `PM-2` `makakoo-os`, `PM-3` `MAKAKOO/AGENTS.md`) and executes `A17` + `M1–M8` benchmarks/live verification
 - `M8: scripts/bench-intel-mac.sh`
 

@@ -308,7 +308,7 @@ pub fn run_subprocess_group(req: &Request, mut ctx: Option<&mut CallContext>) ->
         "run_id": ws.registry.as_ref().map(|(_, r, _)| r.clone()).unwrap_or_default(),
         "call_id": ws.registry.as_ref().map(|(_, _, c)| c.clone()).unwrap_or_else(|| uuid::Uuid::new_v4().simple().to_string()),
         "owned_paths": owned,
-        // Super Lope addition: the caller's absolute wall deadline, so the
+        // Lope v2 addition: the caller's absolute wall deadline, so the
         // supervisor classifies provider_timeout itself instead of racing
         // the caller's cancel (Python ignores unknown spec keys).
         "deadline_at": lope_core::time::now() + call_deadline.saturating_duration_since(Instant::now()).as_secs_f64(),
