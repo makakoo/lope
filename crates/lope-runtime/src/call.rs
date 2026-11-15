@@ -365,13 +365,16 @@ pub fn run_subprocess_group(req: &Request, mut ctx: Option<&mut CallContext>) ->
     let stdin = child.stdin.take().unwrap();
     let fd = stdin.as_raw_fd();
     let wire_complete = write_deadline(fd, wire.as_bytes(), call_deadline);
-    let exited = wire_complete && wait_exit(&rx, call_deadline);
+    // Python reserves 1.0 s for a 0.7 s cleanup; keep the same margin over the
+    // DEC-4 budget both when waiting for `lope-supervisor` to finish its own
+    // deadline cleanup (`snapshot` + `terminate_and_reap` + `.diag`) and after
+    // sending fallback `cancel\n`.
+    let reserve = SUPERVISOR_CLEANUP_RESERVE.max(crate::cleanup_budget() + 0.5);
+    let wait_until = if wire_complete { call_deadline + Duration::from_secs_f64(reserve) } else { call_deadline };
+    let exited = wire_complete && wait_exit(&rx, wait_until);
     let parent_timed_out = !exited;
     if !exited {
         write_deadline(fd, b"cancel\n", Instant::now() + Duration::from_millis(100));
-        // Python reserves 1.0 s for a 0.7 s cleanup; keep the same margin
-        // over the DEC-4 budget.
-        let reserve = SUPERVISOR_CLEANUP_RESERVE.max(crate::cleanup_budget() + 0.5);
         if !wait_exit(&rx, Instant::now() + Duration::from_secs_f64(reserve)) {
             kill_supervisor(&child, &rx);
         }

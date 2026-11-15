@@ -520,8 +520,13 @@ pub fn run_provider(spec: &Value, ctl: Box<dyn Read + Send>) -> Value {
                 break;
             }
             if io.control.iter().any(|c| String::from_utf8_lossy(c).to_lowercase().contains("cancel")) {
-                outcome = "cancelled".into();
-                reason = "parent requested cancellation".into();
+                if Instant::now() >= deadline {
+                    outcome = "provider_timeout".into();
+                    reason = format!("provider timed out after {}s", py_g(timeout));
+                } else {
+                    outcome = "cancelled".into();
+                    reason = "parent requested cancellation".into();
+                }
                 let snap = snapshot(&io, pid, pgid);
                 fin = terminate_and_reap(&provider, &mut io, &rx, budget);
                 diag_path = write_diag(&registry, &outcome, timeout, snap, &io);
