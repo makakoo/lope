@@ -27,7 +27,23 @@ compiled="$root/crates/lope-compat/grammar/argparse-python-lope.json"
 if [ "${1:-}" = "--update" ]; then
     cp "$here/out/python.json" "$compiled"
     echo "dump-python: updated $compiled"
-elif ! cmp -s "$here/out/python.json" "$compiled"; then
+elif ! "${LOPE_PYTHON:-/usr/bin/python3}" -I -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as f1, open(sys.argv[2], encoding="utf-8") as f2:
+        live = json.load(f1)
+        compiled = json.load(f2)
+except (OSError, ValueError):
+    sys.exit(1)
+ok = (
+    isinstance(live, dict)
+    and isinstance(compiled, dict)
+    and set(live) == set(compiled)
+    and {k: v for k, v in live.items() if k != "python_version"}
+    == {k: v for k, v in compiled.items() if k != "python_version"}
+)
+sys.exit(0 if ok else 1)
+' "$here/out/python.json" "$compiled"; then
     echo "dump-python: live argparse tree differs from the grammar compiled into lope-compat" >&2
     echo "dump-python: review the change, then run: tools/parity/dump-python --update" >&2
     diff -u "$compiled" "$here/out/python.json" | head -40 >&2

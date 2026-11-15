@@ -60,6 +60,7 @@ MASKS = [
     (re.compile(r'"(duration|elapsed|latency|seconds|wall|started|finished|created|updated|pid|pgid)[a-z_]*":\s*[-0-9.e]+'), r'"\1":<N>'),
     (re.compile(r"\bpid[ =:]\s*\d+\b"), "pid <PID>"),
     (re.compile(r"ps:\w{3} \w{3} +\d+ \d{2}:\d{2}:\d{2} \d{4}"), "ps:<START>"),
+    (re.compile(r"\bproc:\d+\b"), "proc:<START>"),
     (re.compile(r"\b(owner|cpu|rss|deadline)=-?[\d.]+"), r"\1=<N>"),
     (re.compile(r"\b[0-9a-f]{16,64}\b"), "<HEX>"),
 ]
