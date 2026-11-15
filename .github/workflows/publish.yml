@@ -105,12 +105,51 @@ jobs:
       - name: Install cross linker & QEMU (Linux aarch64)
         if: matrix.cross == true
         run: |
+          sudo python3 - <<'PY'
+          import pathlib, re
+          for p in [pathlib.Path("/etc/apt/sources.list"), *sorted(pathlib.Path("/etc/apt/sources.list.d").glob("*.list"))]:
+              if not p.exists() or p.name == "arm64-ports.list":
+                  continue
+              out = []
+              for line in p.read_text().splitlines():
+                  s = line.lstrip()
+                  if s.startswith(("deb ", "deb\t", "deb-src ", "deb-src\t")):
+                      kw, rest = s.split(None, 1)
+                      if rest.lstrip().startswith("["):
+                          if "arch=" not in rest.split("]", 1)[0]:
+                              rest = re.sub(r"^(\s*\[)", r"\1arch=amd64 ", rest, count=1)
+                      else:
+                          rest = "[arch=amd64] " + rest
+                      out.append(f"{kw} {rest}")
+                  else:
+                      out.append(line)
+              p.write_text("\n".join(out) + "\n")
+          for p in sorted(pathlib.Path("/etc/apt/sources.list.d").glob("*.sources")):
+              text = p.read_text()
+              stanzas = re.split(r"\n\s*\n", text.strip())
+              updated = []
+              for stanza in stanzas:
+                  lines = stanza.splitlines()
+                  has_repo = any(re.match(r"(?i)^(Types|URIs)\s*:", ln) for ln in lines)
+                  has_arch = any(re.match(r"(?i)^Architectures\s*:", ln) for ln in lines)
+                  if has_repo and not has_arch:
+                      lines.append("Architectures: amd64")
+                  updated.append("\n".join(lines))
+              p.write_text("\n\n".join(updated) + "\n")
+          pathlib.Path("/etc/apt/sources.list.d/arm64-ports.list").write_text(
+              "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy main universe\n"
+              "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-updates main universe\n"
+              "deb [arch=arm64] http://ports.ubuntu.com/ubuntu-ports jammy-security main universe\n"
+          )
+          PY
+          sudo dpkg --add-architecture arm64
           sudo apt-get update
-          sudo apt-get install -y gcc-aarch64-linux-gnu qemu-user
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends gcc-aarch64-linux-gnu qemu-user libsqlite3-dev:arm64
           mkdir -p .cargo
           cat >> .cargo/config.toml <<'EOF'
           [target.aarch64-unknown-linux-gnu]
           linker = "aarch64-linux-gnu-gcc"
+          rustflags = ["-L", "native=/usr/lib/aarch64-linux-gnu"]
           EOF
 
       - name: Build release binary (locked)
@@ -179,9 +218,18 @@ jobs:
         run: |
           set -euo pipefail
           stage="${{ runner.temp }}/release-smoke-aarch64"
-          mkdir -p "$stage"
+          mkdir -p "$stage/home"
           tar -C "$stage" -xzf "dist/lope-${{ matrix.target }}.tar.gz"
-          qemu-aarch64 -L /usr/aarch64-linux-gnu "$stage/lope-${{ matrix.target }}/bin/lope" --version
+          bin="$stage/lope-${{ matrix.target }}/bin/lope"
+          qemu_run() {
+            qemu-aarch64 -L /usr/aarch64-linux-gnu \
+              -E LD_LIBRARY_PATH=/lib/aarch64-linux-gnu:/usr/lib/aarch64-linux-gnu \
+              -E HOME="$stage/home" \
+              "$bin" "$@"
+          }
+          qemu_run --version
+          qemu_run docs >/dev/null
+          qemu_run memory stats >/dev/null
 
       - name: Upload target archive artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
