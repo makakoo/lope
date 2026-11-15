@@ -1,0 +1,29 @@
+[package]
+name = "lope-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "lope"
+path = "src/main.rs"
+
+[dependencies]
+lope-core.workspace = true
+lope-compat.workspace = true
+lope-state.workspace = true
+lope-runtime.workspace = true
+lope-providers.workspace = true
+lope-memory.workspace = true
+lope-makakoo.workspace = true
+lope-engine.workspace = true
+lope-flow.workspace = true
+serde_json.workspace = true
+libc.workspace = true
+fancy-regex.workspace = true
+clap.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

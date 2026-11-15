@@ -35,3 +35,8 @@ htmlcov/
 .lope/
 config.json
 run.lock
+
+# Rust & v2 parity
+/target/
+/tools/parity/out/
+lope-runs/

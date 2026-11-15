@@ -1,0 +1,64 @@
+# S0 pins — recorded 2026-11-07 (PL-1 done via tag; see below)
+
+## Python Lope (parity baseline)
+path        /Users/sebastian/.lope
+HEAD        9cffa551e48797051004e81f017aa427e71f5552  (v0.16.0-4-g9cffa55)
+version     0.17.3
+dirty       15 modified tracked files, 0 untracked outside .gitignore
+diff sha256 f7133f264da1f243c7dd1ee0e4026d2e467c97f61c503d4a0f795fff995180c1  (git diff of the working tree)
+PL-1        DONE 2026-11-07: annotated tag super-lope-baseline-0.17.3 -> commit 9721b1e6b0d2
+            (tree 4783b17bfbae == the working tree above, parent 9cffa55). Created with a
+            temporary index: branch main, the real index and the 15 modified files are
+            untouched, and nothing was pushed. `git -C ~/.lope diff super-lope-baseline-0.17.3`
+            is empty. docs/reference/* regenerated from a `git archive` of the tag
+            (tools/parity/capture-reference); the argparse dump of the export equals the
+            grammar compiled into lope-compat.
+interpreter /usr/bin/python3 3.9.6
+
+## Other repositories
+herdr           ee5bfb5041bb3e4a49d591c72308aae3c81ecdde  preview-2026-10-12-6d697e1e75ff-39-gee5bfb50  dirty=0
+makakoo-os      2e1bfe79c81edce3ac6135da116f253bc37ddc0f  v0.4.0-1-g2e1bfe7  dirty=0
+makakoo-jungle  8a5410550fac2773333a3129d2135efae604b9b3  8a541055  dirty=0
+herdr crate     0.9.5
+makakoo         makakoo 0.4.0
+glimmer         makakoo-jungle package.json version 1.0.0
+
+## Toolchain
+which -a cargo:
+  /usr/local/bin/cargo
+  /usr/local/bin/cargo
+  /Users/sebastian/.cargo/bin/cargo
+rust-toolchain.toml channel: 1.96.1
+build entry point: scripts/cargo (puts ~/.cargo/bin first; see the script for why)
+  cargo 1.96.1 (356927216 2026-06-26)
+  rustc 1.96.1 (31fca3adb 2026-06-26)
+rustup: rustup 1.29.0 (28d1352db 2026-03-05)
+rustup show:
+  Default host: x86_64-apple-darwin
+  rustup home:  /Users/sebastian/.rustup
+  
+  installed toolchains
+  --------------------
+  stable-x86_64-apple-darwin (default)
+  1.92.0-x86_64-apple-darwin
+  1.95.0-x86_64-apple-darwin
+  1.96.1-x86_64-apple-darwin (active)
+  
+  active toolchain
+  ----------------
+  name: 1.96.1-x86_64-apple-darwin
+  active because: overridden by '/Users/sebastian/Projects/apps/super-lope/rust-toolchain.toml'
+  installed targets:
+    x86_64-apple-darwin
+host: x86_64 macOS 15.7.9, Intel(R) Core(TM) i5-8257U CPU @ 1.40GHz
+node: v22.22.3
+
+## Glimmer test baseline (NFR15)
+Recorded 2026-11-07 with tools/parity/glimmer-baseline: node --test over tests/companion
+and tests/s2..s8, with LOPE_HOME = a sandbox with offline mock validators, so the headless
+`lope review` the companion test starts never reached real validators or ~/.lope/runs.
+Full log: docs/evidence/glimmer-baseline-2026-11-07.txt
+  tests 71, pass 70, fail 1
+  only failure: tests/s3/watched-council.test.js:290 "Must be clean Lope v0.17.2 pin"
+  (known pre-existing failure, Audit 03 §1.6). Other known issues (zsh PIPESTATUS,
+  countActiveSlots leak) are not exercised by these suites.

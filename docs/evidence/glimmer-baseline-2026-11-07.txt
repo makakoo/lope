@@ -1,0 +1,212 @@
+# Glimmer test baseline (NFR15) — 2026-11-07T15:40:01Z
+# makakoo-jungle 8a5410550fac2773333a3129d2135efae604b9b3; lope on PATH: /Users/sebastian/bin/lope -> # (opencode, Claude Code subprocesses, cron jobs, etc.) where the shell alias
+# LOPE_HOME sandbox with offline mock validators; load: 38.19 52.86 62.77
+## tests/companion
+(node:48485) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/companion/companion.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S1 — Companion Socket & Headless Operations
+  ✔ A2: Socket permissions 0600, directory 0700, zero TCP listeners, and UID mismatch rejection (1008.623238ms)
+  ✔ A3: Search query with shell metacharacters (; rm -rf /) passed as single argument without shell execution (102.815696ms)
+  ✔ A4: Remember appends formatted entry and second call preserves previous entry (106.532077ms)
+  ✔ A5: Rejection of private keys, sk-, ghp_, AKIA, and .env patterns with refused_secret (11.563017ms)
+  ✔ A7: parent_worktree_refused guard for implement without child worktree and refused_mode for execute without spawning (4.044483ms)
+  ✔ A8: Idempotent clientRequestId returns existing job record without spawning new job (7.780564ms)
+  ✔ A9: Symlink refusal on cwd returns symlink_refused (4.443914ms)
+  ✔ A11: Two-slot cap returns busy on 3rd active job; exited jobs do not count (63.9836ms)
+  ✔ A12: perms.grant refuses /, $HOME, .., and non-directories before calling makakoo (11.302243ms)
+  ✔ A13: Missing Lope shim sets lope.ok: false while makakoo.ok remains true (80.521094ms)
+  ✔ SC14: Host-up vs host-down split for glimmer run review and glimmer council (590.830392ms)
+✔ Sprint S1 — Companion Socket & Headless Operations (2053.242891ms)
+ℹ tests 11
+ℹ suites 1
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4157.770762
+## tests/s2
+(node:49046) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s2/fork-env.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S2 — Fork Shell, Updater/Telemetry Off & Local PTY Environment
+  ✔ A14 — Update feed configuration does not point at upstream Orca feed (10.718354ms)
+  ✔ A15 — Telemetry defaults to disabled and requires explicit opt-in (1.390593ms)
+  ✔ FR25 / M5 — Local macOS PTY receives Homebrew shim, sockets, and MAKAKOO_HOME (4.237232ms)
+  ✔ FR25 / M5 — WSL and remote SSH panes never receive MAKAKOO_HOME or sockets (0.435203ms)
+  ✔ FR6 / NFR7 — No API keys or credentials injected into PTY env (2.700939ms)
+  ✔ FR30 / A13 — terminal-host.json lifecycle marker (5.709978ms)
+  ✔ SC1 / FR1 — Normal agent gestures spawn zero lope processes (156.030816ms)
+  ✔ NFR2 / NFR8 — Diff against baseline touches only allowed integration seams and zero protected engines (110.196198ms)
+✔ Sprint S2 — Fork Shell, Updater/Telemetry Off & Local PTY Environment (303.061078ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1133.27503
+## tests/s3
+(node:49207) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s3/watched-council.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S3 — Watched Council, Fake-Lope, Clean Pin & Quit Survival
+  ✔ A6 — Spawned argv contains review, one notes file positional, consensus, and NO implement (11.813641ms)
+  ✔ A6 — Plain non-git folder (kind: folder) handles .lope/reports without failing on missing .git (2.169911ms)
+  ✔ A10 — Single exit watcher coordinates finalization and quiet open (navigation: caller) (5.425465ms)
+  ✔ A10 — stripAnsi cleanly removes terminal color codes (0.706694ms)
+  ✔ FR12 / M3 — Sent comments receive sentAt timestamp when report exists (2.296439ms)
+  ✔ FR29 / A11 / SC5 — 3rd start while two slots active returns busy (37.872653ms)
+  ✔ SC4 Stage 1 — Fake Lope produces # council and ok; writes s3-fake.md (45.022373ms)
+  ✖ SC4 Stage 2 — Clean Lope pin (0.17.2) executes review and prints validator team (530.743217ms)
+  ✔ FR21 / SC10 — Lope process under orca-terminal-host survives main process Cmd-Q (22.553882ms)
+  ✔ NFR2 / NFR8 — Diff against baseline touches only allowed integration seams and zero protected engines (48.216064ms)
+✖ Sprint S3 — Watched Council, Fake-Lope, Clean Pin & Quit Survival (725.337589ms)
+ℹ tests 10
+ℹ suites 1
+ℹ pass 9
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1601.282976
+
+✖ failing tests:
+
+test at tests/s3/watched-council.test.js:286:3
+✖ SC4 Stage 2 — Clean Lope pin (0.17.2) executes review and prints validator team (530.743217ms)
+  AssertionError [ERR_ASSERTION]: Must be clean Lope v0.17.2 pin
+      at TestContext.<anonymous> (file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s3/watched-council.test.js:290:12)
+      at Test.runInAsyncScope (node:async_hooks:226:14)
+      at Test.run (node:internal/test_runner/test:1382:25)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Suite.processPendingSubtests (node:internal/test_runner/test:960:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+## tests/s4
+(node:49291) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s4/brain-palette.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S4 — Brain Palette (Cmd-P), Ask Harvey & Remember in Window
+  ✔ FR2 / A3 — Cmd-P without brain prefix never spawns makakoo; brain prefix executes search on remainder (3.016147ms)
+  ✔ FR3 / A8 — Pressing Enter opens file only when realpath stays under $HOME or current worktree (5.566109ms)
+  ✔ M2 / M7 — searchBrain returns hits and functions regardless of daemon status (402.323511ms)
+  ✔ FR4 / SC2 — checkGatewayReachability detects offline gateway; askHarvey times out at 120s and refuses when gateway is down (1447.053223ms)
+  ✔ FR5 / FR6 / A4 / SC3 — Remember refuses secrets inline and appends clean note with branch name (96.429199ms)
+  ✔ SC1 / FR1 — Brain palette search and remember spawn zero lope processes (143.380493ms)
+  ✔ NFR2 / NFR8 — Diff against baseline touches only allowed integration seams and zero protected engines (59.886104ms)
+✔ Sprint S4 — Brain Palette (Cmd-P), Ask Harvey & Remember in Window (2201.8685ms)
+ℹ tests 7
+ℹ suites 1
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2747.878686
+## tests/s5
+(node:49411) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s5/toolbar-council.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S5 — Toolbar Council, Document Mode, 7 Lenses, Design Mode & Notification Feed
+  ✔ SC6 / FR15 — Council this file passes single positional file and never implement (14.158481ms)
+  ✔ SC6 / FR15 — Council this branch detects changed text files and skips binaries (480.341317ms)
+  ✔ SC6 / FR15 — Council this branch enforces 40-text-file hard stop (writes no file, zero spawn) (701.669548ms)
+  ✔ SC15 / FR37 / M10 — Council open tabs works on plain non-git folders (kind: folder) (4.608109ms)
+  ✔ SC15 / FR38 — 7 Council Lenses map correctly to --focus flag (or omitted for Engineering) (15.818004ms)
+  ✔ SC7 / FR16 — Council this element is disabled with exact message when sourceFile is missing (1.523673ms)
+  ✔ SC7 / FR16 — Council this element passes single notes file positional when sourceFile is present (4.798738ms)
+  ✔ FR14 — finalizeCouncilReport generates title Council · <worktree>, truncated body, and fires notification (11.293173ms)
+  ✔ SC1 / FR1 — Toolbar and council helpers spawn zero running lope processes (200.699081ms)
+  ✔ NFR2 / NFR8 — Diff against origin/main touches only approved Patch Allowlist files (329.932249ms)
+✔ Sprint S5 — Toolbar Council, Document Mode, 7 Lenses, Design Mode & Notification Feed (1826.970414ms)
+ℹ tests 10
+ℹ suites 1
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2483.378464
+## tests/s6
+(node:49761) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s6/agent-skills.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S6 — Agent Skills (/brain, /remember, /council) & Catalog Share
+  ✔ FR19 / FR20 — Skills /brain, /remember, and /council exist in bundled catalog with valid frontmatter (6.218835ms)
+  ✔ FR19 / FR20 — Glimmer installer places skills into ~/.agents/skills/ for mobile/desktop share (4.324229ms)
+  ✔ M6 / SC9 — /brain instructs visible search before answering; glimmer search executes FTS (741.940891ms)
+  ✔ FR19 / SC9 — /remember requires explicit operator confirmation before saving; refuses secrets (283.318362ms)
+  ✔ FR19 / M6 / SC9 — /council calls glimmer council, enforces 40-path cap, and passes single notes file (773.232542ms)
+  ✔ SC1 / FR1 — Agent skills and discovery spawn zero running lope processes (152.366326ms)
+  ✔ NFR2 / NFR8 — Diff against origin/main touches only approved Patch Allowlist files (140.085667ms)
+✔ Sprint S6 — Agent Skills (/brain, /remember, /council) & Catalog Share (2137.111925ms)
+ℹ tests 7
+ℹ suites 1
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2614.610912
+## tests/s7
+(node:50126) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s7/plan-child-build.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S7 — Plan Sprint & Child-Worktree Build
+  ✔ A7 / FR18 — lope.start rejects implement with parent_worktree_refused when cwd == parentWorktree (3.760141ms)
+  ✔ A7 / FR18 — lope.start rejects execute mode unconditionally with refused_mode (1.428872ms)
+  ✔ FR17 / FR38 — Plan sprint produces negotiate argv, slugified sprint doc, and respects domain & brain context (8.040512ms)
+  ✔ FR17 / FR37 / FR38 — checkSprintDoc disables Build on plain folders and missing/empty sprint files (3.317138ms)
+  ✔ FR18 / SC8 — Build sprint creates child worktree, sets cwd to child, and leaves parent untouched (203.999533ms)
+  ✔ FR17 / FR18 — bin/glimmer plan and build execute CLI interface with proper preconditions (1464.261271ms)
+  ✔ SC1 / FR1 — Plan and Build helpers spawn zero running lope processes (169.944427ms)
+  ✔ NFR2 / NFR8 — Diff against origin/main touches only approved Patch Allowlist files (900.191105ms)
+✔ Sprint S7 — Plan Sprint & Child-Worktree Build (3038.342067ms)
+ℹ tests 8
+ℹ suites 1
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 3838.585521
+## tests/s8
+(node:50233) [MODULE_TYPELESS_PACKAGE_JSON] Warning: Module type of file:///Users/sebastian/Projects/apps/makakoo-jungle/tests/s8/edges-grants-mobile.test.js is not specified and it doesn't parse as CommonJS.
+Reparsing as ES module because module syntax was detected. This incurs a performance overhead.
+To eliminate this warning, add "type": "module" to /Users/sebastian/Projects/apps/makakoo-jungle/package.json.
+(Use `node --trace-warnings ...` to show where the warning was created)
+▶ Sprint S8 — Edges, Grants, Scheduled, Leases & Mobile Suite
+  ✔ FR24 / M5 / SC10 — Remote and SSH worktrees disabled with exact tooltip while local remains enabled (5.309089ms)
+  ✔ FR26 / SC11 — Grant folder access offers 4 durations and refuses / and $HOME (125.654166ms)
+  ✔ FR27 / SC12 — Makakoo SANCHO status is read-only and never calls sancho tick (472.898063ms)
+  ✔ FR34 / M8 — Lope sprint leases count read-only from ~/.lope/state/sprints/ with zero modifications (694.312086ms)
+  ✔ FR35 / M9 — Doctor 1-click repairs handle valid actions and reject invalid actions (1.012799ms)
+  ✔ A14 — Update feed configuration does not point at upstream Orca feed (second pass) (1.037943ms)
+  ✔ A15 — Telemetry defaults to disabled and requires explicit opt-in (second pass) (1.16052ms)
+  ✔ FR20 / M4 — Zero files modified under mobile/ directory (43.899276ms)
+  ✔ SC1 / FR1 — Edge operations spawn zero lope processes (136.678076ms)
+  ✔ NFR2 / NFR8 — Cumulative Patch Allowlist and Core Engine Isolation check (49.526138ms)
+✔ Sprint S8 — Edges, Grants, Scheduled, Leases & Mobile Suite (1549.617744ms)
+ℹ tests 10
+ℹ suites 1
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2018.630925

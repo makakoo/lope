@@ -1,0 +1,507 @@
+//! The native coverage table (FR5, Spec 01 §5): the single place that says
+//! which invocations run in Rust. Everything else is delegated to Python Lope.
+//! It grows sprint by sprint, each entry backed by parity tests.
+
+/// One natively implemented command path and the options it supports.
+#[derive(Debug)]
+pub struct Coverage {
+    /// Verb and (for nested commands) subcommand, by canonical name.
+    pub path: &'static [&'static str],
+    /// clap ids (option strings / positional dests) that may be present.
+    /// An invocation using any other argument is delegated.
+    pub args: &'static [&'static str],
+    /// Sprint that added the entry.
+    pub since: &'static str,
+}
+
+pub static COVERAGE: &[Coverage] = &[
+    Coverage { path: &["version"], args: &[], since: "S0" },
+    Coverage { path: &["status"], args: &[], since: "S1" },
+    Coverage { path: &["jobs"], args: &[], since: "S1" },
+    Coverage { path: &["jobs", "list"], args: &["--json"], since: "S1" },
+    Coverage { path: &["jobs", "reap"], args: &["--dry-run", "--stale", "--json"], since: "S1" },
+    Coverage { path: &["jobs", "prune"], args: &["--stale", "--dry-run", "--json"], since: "S1" },
+    Coverage { path: &["jobs", "kill"], args: &["run_id", "--json"], since: "S1" },
+    // S4 + S5 fan-out + review verbs (including --brain-*).
+    Coverage {
+        path: &["ask"],
+        args: &[
+            "question",
+            "--json",
+            "--context",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["pipe"],
+        args: &[
+            "--require-all",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["vote"],
+        args: &[
+            "prompt",
+            "--options",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["compare"],
+        args: &[
+            "file_a",
+            "file_b",
+            "--criteria",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
+        ],
+        since: "S4",
+    },
+    Coverage {
+        path: &["review"],
+        args: &[
+            "file",
+            "--focus",
+            "--json",
+            "--consensus",
+            "--structured",
+            "--min-consensus",
+            "--similarity",
+            "--format",
+            "--output",
+            "--include-raw",
+            "--remember",
+            "--divide",
+            "--roles",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--synth",
+            "--anonymous",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S4",
+    },
+    Coverage { path: &["team"], args: &[], since: "S3" },
+    Coverage { path: &["team", "list"], args: &[], since: "S3" },
+    Coverage { path: &["team", "enable"], args: &["names", "--primary"], since: "S3" },
+    Coverage { path: &["team", "disable"], args: &["names"], since: "S3" },
+    Coverage { path: &["team", "remove"], args: &["name"], since: "S3" },
+    Coverage {
+        path: &["team", "add"],
+        args: &[
+            "name",
+            "--cmd",
+            "--stdin",
+            "--url",
+            "--model",
+            "--key-env",
+            "--key-header",
+            "--key-prefix",
+            "--response-path",
+            "--body-json",
+            "--from-curl",
+            "--wrap",
+            "--timeout",
+            "--max-tokens",
+            "--primary",
+            "--disabled",
+            "--force",
+        ],
+        since: "S3",
+    },
+    Coverage {
+        path: &["team", "test"],
+        args: &["name", "prompt", "--timeout"],
+        since: "S3",
+    },
+    Coverage {
+        path: &["team", "health"],
+        args: &["--timeout", "--json"],
+        since: "S3",
+    },
+    Coverage { path: &["configure"], args: &[], since: "S3" },
+    Coverage { path: &["memory"], args: &[], since: "S4" },
+    Coverage { path: &["memory", "stats"], args: &["--json"], since: "S4" },
+    Coverage {
+        path: &["memory", "search"],
+        args: &["query", "--min-score", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "file"],
+        args: &["path", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "hotspots"],
+        args: &["--days", "--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "forget"],
+        args: &["--hash", "--file"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["memory", "gates"],
+        args: &["--limit", "--json"],
+        since: "S4",
+    },
+    Coverage {
+        path: &["deliberate"],
+        args: &[
+            "template",
+            "scenario",
+            "--depth",
+            "--out",
+            "--no-anonymize",
+            "--minority-report",
+            "--human-questions",
+            "--json",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S6",
+    },
+    // S7 sprint engine, gates, audit, implement, and flow graphs.
+    Coverage {
+        path: &["negotiate"],
+        args: &[
+            "goal",
+            "--out",
+            "--max-rounds",
+            "--context",
+            "--context-file",
+            "--domain",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+            "--brain-context",
+            "--brain-budget",
+            "--brain-log",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["execute"],
+        args: &[
+            "sprint_doc",
+            "--phase",
+            "--manual",
+            "--gates",
+            "--gate-config",
+            "--trust",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["implement"],
+        args: &[
+            "sprint_doc",
+            "--agents",
+            "--escalate-to",
+            "--phase",
+            "--gates",
+            "--gate-config",
+            "--trust",
+            "--dry-run",
+            "--interactive",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["audit"],
+        args: &[
+            "sprint_doc",
+            "--no-journal",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["gate"],
+        args: &[],
+        since: "S7",
+    },
+    Coverage {
+        path: &["gate", "save"],
+        args: &[
+            "--config",
+            "--baseline",
+            "--timeout",
+            "--json",
+            "--remember",
+            "--trust",
+            "--run-timeout",
+            "--allow-unbounded-run",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["gate", "check"],
+        args: &[
+            "--config",
+            "--baseline",
+            "--timeout",
+            "--json",
+            "--remember",
+            "--trust",
+            "--run-timeout",
+            "--allow-unbounded-run",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["check"],
+        args: &[
+            "--config",
+            "--timeout",
+            "--json",
+            "--remember",
+            "--trust",
+            "--run-timeout",
+            "--allow-unbounded-run",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow"],
+        args: &[],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow", "list"],
+        args: &[],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow", "init"],
+        args: &["template", "--out"],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow", "validate"],
+        args: &["workflow"],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow", "render"],
+        args: &["workflow", "--out", "--format"],
+        since: "S7",
+    },
+    Coverage {
+        path: &["flow", "run"],
+        args: &[
+            "workflow",
+            "--task",
+            "--cwd",
+            "--out",
+            "--max-node-visits",
+            "--no-journal",
+            "--dry-run",
+            "--validators",
+            "--primary",
+            "--timeout",
+            "--respect-provider-timeout",
+            "--run-timeout",
+            "--allow-unbounded-run",
+            "--max-calls",
+            "--max-chunks",
+            "--request-policy",
+            "--parallel",
+            "--sequential",
+        ],
+        since: "S7",
+    },
+    Coverage {
+        path: &["install"],
+        args: &["--host"],
+        since: "S8",
+    },
+    Coverage {
+        path: &["docs"],
+        args: &[],
+        since: "S8",
+    },
+];
+
+pub fn verb_has_coverage(verb: &str) -> bool {
+    COVERAGE.iter().any(|c| c.path.first() == Some(&verb))
+}
+
+pub fn is_covered(path: &[&str], present: &[&str]) -> bool {
+    COVERAGE.iter().any(|c| c.path == path && present.iter().all(|a| c.args.contains(a)))
+}
+
+/// Stable identity of the table, recorded in docs/evidence at each sprint end
+/// (and printed by `lope status` once that is native in S1).
+pub fn fingerprint() -> String {
+    let mut canonical = String::new();
+    for c in COVERAGE {
+        canonical.push_str(&c.path.join(" "));
+        canonical.push('|');
+        let mut args: Vec<&str> = c.args.to_vec();
+        args.sort_unstable();
+        canonical.push_str(&args.join(","));
+        canonical.push('\n');
+    }
+    let h = canonical.bytes().fold(0xcbf29ce484222325u64, |h, b| (h ^ b as u64).wrapping_mul(0x100000001b3));
+    format!("fnv64:{h:016x}")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::grammar;
+
+    #[test]
+    fn every_entry_exists_in_the_python_grammar() {
+        for c in COVERAGE {
+            let mut spec = &grammar::ROOT;
+            for name in c.path {
+                spec = spec.subcommand(name).unwrap_or_else(|| panic!("{:?} not in grammar", c.path));
+                assert_eq!(spec.name, *name, "coverage must use canonical names, not aliases");
+            }
+            for a in c.args {
+                let known = spec.options.iter().any(|o| o.id() == *a) || spec.positionals.iter().any(|p| p.dest == *a);
+                assert!(known, "{:?}: unknown arg {a}", c.path);
+            }
+        }
+    }
+
+    #[test]
+    fn version_is_native_only_without_arguments() {
+        assert!(is_covered(&["version"], &[]));
+        assert!(!is_covered(&["version"], &["--help"]));
+        assert!(is_covered(&["review"], &["file", "--consensus"]));
+        assert!(is_covered(&["review"], &["file", "--brain-log"]));
+        assert!(is_covered(&["deliberate"], &["template", "scenario"]));
+        assert!(is_covered(&["negotiate"], &["goal"]));
+        assert!(is_covered(&["install"], &["--host"]));
+        assert!(is_covered(&["docs"], &[]));
+        assert!(is_covered(&["jobs", "kill"], &["run_id", "--json"]));
+    }
+}

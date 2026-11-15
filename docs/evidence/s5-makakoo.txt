@@ -1,0 +1,130 @@
+# S5 evidence — Makakoo bridge (`lope-makakoo`), DEC-10 hygiene fixes, and PM-1..PM-6 patch specifications
+generated 2026-11-14T14:01:30+01:00
+
+## Scope completed in S5
+- `crates/lope-makakoo/src/lib.rs`:
+  - `detect_makakoo`: probes `MAKAKOO_BIN`, `PATH`, and `MAKAKOO_HOME` without side effects.
+  - `query_brain` (`FR28`, `DEC-10`): executes `makakoo search <query>` with a 30s timeout in an isolated process group, strips ANSI escape sequences and box-drawing table chrome (`clean_brain_search_output`), treats `(no hits)` as empty, redacts secrets, and trims to `--brain-budget` (`max(budget_tokens * 4, 400)` chars) on a newline boundary.
+  - `build_context_block` / `prepend_context_once` (`FR28`, `A13`): formats the `<<< Makakoo Brain context (query: ...) >>>` advisory block and ensures it is prepended at most once; empty / `(no hits)` produces no block.
+  - `write_brain_journal` (`FR29`, `DEC-10`): requires `MAKAKOO_HOME` (matching Python's error when unset), normalizes `- ` Logseq outliner bullets, acquires an exclusive `flock(LOCK_EX)` on `$MAKAKOO_HOME/data/Brain/journals/YYYY_MM_DD.md` using the **local** date (`today_local_journal_filename`), and runs `makakoo sync --file <journal>` (15s timeout).
+  - `write_auto_memory` (`FR30`): gated by `LOPE_BRAIN_AUTOMEMORY=1`, writes `$MAKAKOO_HOME/data/auto-memory/lope-<name>.md`.
+- `crates/lope-cli` & `crates/lope-compat`:
+  - Wired `--brain-context`, `--brain-budget`, and `--brain-log` into native `ask`, `pipe`, and `review`.
+  - Added `--brain-context`, `--brain-budget`, and `--brain-log` to `COVERAGE` for `ask`, `pipe`, and `review`.
+
+## Acceptance gate A13 (`cargo test -p lope-makakoo`)
+     Running tests/s5_makakoo.rs (target/debug/deps/s5_makakoo-3730a3578871b383)
+test fr30_auto_memory_gated_and_written ... ok
+test a13_brain_context_ansi_box_stripping_budget_and_prepend_once ... ok
+test a13_journal_local_date_locked_append_sync_file_and_unset_home ... ok
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.09s
+
+## `gym_lope_gate` dry-run verification against `~/.lope` (DEC-8)
+Verified imports (`lope.validators.build_validator_pool`, `VerdictStatus`, `lope.config.load_layered`, `lope.negotiator._build_validator_prompt`, `lope.models.Proposal`) and `validate_pending(date="2026-11-14")`:
+GYM_LOPE_GATE_DRY_RUN_OK: {'date': '2026-11-14', 'approved': [], 'rejected': [], 'malformed': [], 'errors': [], 'behavioral_passed': 0, 'behavioral_failed': 0}
+
+## Makakoo patch set specifications (PM-1..PM-6) — drafted for `makakoo-os` / `MAKAKOO` (no edits applied from this repo)
+
+### PM-1 — Migrate `gym_lope_gate` (3 copies) off `import lope.*` to CLI contract
+- **Files**:
+  1. `/Users/sebastian/projects/apps/makakoo-os/plugins-core/lib-harvey-core/src/core/gym/lope_gate.py:76-141`
+  2. `/Users/sebastian/projects/apps/makakoo-os/plugins-core/mascot-gym/src/gym/lope_gate.py:71-136`
+  3. `/Users/sebastian/MAKAKOO/plugins/lib-harvey-core/src/core/gym/lope_gate.py:76-141`
+- **Proposed diff**:
+```diff
+@@ -76,58 +76,36 @@
+ def _lope_validate(sprint_text: str, sprint_goal: str, timeout: int) -> Dict[str, Any]:
+-    try:
+-        sys.path.insert(0, os.path.expanduser("~/.lope"))
+-        from lope.validators import build_validator_pool, VerdictStatus
+-        from lope.config import load_layered
+-        from lope.negotiator import _build_validator_prompt
+-        from lope.models import Proposal
+-    except Exception as exc:
+-        return {
+-            "status": "infra_error",
+-            "primary_validator": "pool",
+-            "confidence": 0.0,
+-            "rationale": f"lope import failed: {exc!r}",
+-            "required_fixes": [],
+-        }
++    lope_bin = shutil.which("lope") or "/usr/local/bin/lope"
++    with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as tf:
++        tf.write(sprint_text)
++        tmp_path = tf.name
++    try:
++        proc = subprocess.run(
++            [lope_bin, "review", tmp_path, "--consensus", "--format", "json", "--timeout", str(timeout)],
++            capture_output=True, text=True, timeout=timeout + 30,
++        )
++        payload = json.loads(proc.stdout)
++        confirmed = [f for f in payload.get("findings", []) if f.get("consensus_level") == "confirmed"]
++        status = "needs_fix" if confirmed else ("pass" if proc.returncode == 0 else "infra_error")
++        return {
++            "status": status,
++            "primary_validator": (payload.get("validators") or ["pool"])[0],
++            "confidence": 0.85 if proc.returncode == 0 else 0.0,
++            "rationale": f"{len(confirmed)} confirmed finding(s)",
++            "required_fixes": [f.get("message", "") for f in confirmed],
++        }
++    except Exception as exc:
++        return {
++            "status": "infra_error",
++            "primary_validator": "pool",
++            "confidence": 0.0,
++            "rationale": f"lope review failed: {exc!r}",
++            "required_fixes": [],
++        }
++    finally:
++        try:
++            os.unlink(tmp_path)
++        except OSError:
++            pass
+```
+
+### PM-2 — `makakoo setup lope`: detect Rust `lope` binary, drop `python3 -m lope` smoke test
+- **File**: `/Users/sebastian/projects/apps/makakoo-os/makakoo/src/commands/setup/lope.rs:33-35, 101-107, 206, 276-293`
+- **Proposed diff**:
+```diff
+@@ -101,7 +101,7 @@
+ fn install_lope(ui: &mut Ui, lope_home: &Path) -> anyhow::Result<SectionOutcome> {
+-    for bin in ["git", "python3", "bash"] {
++    for bin in ["git", "bash"] {
+         if !binary_on_path(bin) {
+@@ -206,1 +206,1 @@
+-    ui.line("lope: if your shell lacks a `lope` command, add: alias lope='PYTHONPATH=~/.lope python3 -m lope'")?;
++    ui.line("lope: ensure `/usr/local/bin/lope` is on your PATH.")?;
+@@ -276,9 +276,8 @@
+ fn lope_version(lope_home: &Path) -> Option<String> {
+-    let out = Command::new("python3")
+-        .arg("-m")
+-        .arg("lope")
++    let bin = if binary_on_path("lope") { "lope" } else { "/usr/local/bin/lope" };
++    let out = Command::new(bin)
+         .arg("version")
+         .env("LOPE_HOME", lope_home)
+         .output()
+         .ok()?;
+```
+
+### PM-3 — `MAKAKOO/AGENTS.md:100`: replace `PYTHONPATH=~/.lope python3 -m lope configure` with `lope configure`
+- **File**: `/Users/sebastian/MAKAKOO/AGENTS.md:99-101`
+- **Proposed diff**:
+```diff
+ ```bash
+-PYTHONPATH=~/.lope python3 -m lope configure
++lope configure
+ ```
+```
+
+### PM-4 — `infect_global.py:640-645` Pi alias path check
+- **File**: `/Users/sebastian/projects/apps/makakoo-os/plugins-core/lib-harvey-core/src/core/orchestration/infect_global.py:640-645`
+- **Status**: Verified compatible — `~/.lope/commands/opencode` path is preserved by `DEC-8` and `FR37` (`lope install`). No code change required.
+
+### PM-5 — `skill_security.rs:702` scans `~/.lope/skills`
+- **File**: `/Users/sebastian/projects/apps/makakoo-os/makakoo-core/src/skill_security.rs:702`
+- **Status**: Verified compatible — `~/.lope/skills` path is preserved by `DEC-8` and `FR37`. No code change required.
+
+### PM-6 — `onboarding.py:286-313` writes `~/.lope/config.json`
+- **File**: `/Users/sebastian/projects/apps/makakoo-os/plugins-core/lib-harvey-core/src/core/orchestration/onboarding.py:286-313`
+- **Status**: Verified compatible — writes `"validators"` list to `~/.lope/config.json`, which `lope-core::config` reads and writes byte-identically (`FR6`, `A3`). No code change required.

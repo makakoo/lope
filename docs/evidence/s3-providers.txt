@@ -1,0 +1,63 @@
+# S3 evidence — Providers, pool, curl parser, Tier 1 HTTP, Makakoo adapters, and native `team` + `configure`
+generated 2026-11-14T12:28:45+01:00
+
+## Scope completed in S3
+- `crates/lope-providers`:
+  - `verdict.rs`, `diagnostics.rs`, `validity.rs`, `retry.rs`, `budget.rs`, `latency.rs`, `progress.rs`, `invocation.rs`, `request_plan.rs`
+  - `builtin.rs`: all 5 built-ins (`claude`, `codex`, `gemini-cli`, `opencode` with JSONL stream + session export fallback, `aider` with 0600 prompt file) + `.validate()` + `MakakooAdapter` (`enumerate_registered_adapters`, `hydrate_makakoo_result`, `makakoo plugin call --json`)
+  - `generic.rs`: `Subprocess` (argv/stdin, review profile `review_command`/`review_stdin`/`review_workdir`), `validate_provider_config`, and Tier 1 in-process `Http` (`std::net::TcpStream` with wall-clock deadline, `Content-Length` preflight cap, streaming body cap, chunked transfer decoding, 0 child processes)
+  - `curl.rs`: full port of `curl_parser.py` (`parse_curl`, `suggest_env_name`, `curl_to_provider_entry`, `parse_curl_command`)
+  - `pool.rs`: `build_validator_pool` resolution order (learned adapter → built-in → custom `providers` → 10 `KNOWN_GENERIC` CLIs including `agy` → Makakoo adapters)
+- `crates/lope-cli`:
+  - Native `lope team [list|enable|disable|remove|add|test|health]`
+  - Native `lope configure` (interactive TTY selector + non-interactive default fallback)
+
+## Acceptance gate A8 (`cargo test -p lope-providers`)
+     Running unittests src/lib.rs (target/debug/deps/lope_providers-6515823530440cf5)
+test pyre::tests::splitlines_like_python ... ok
+     Running tests/s3_providers.rs (target/debug/deps/s3_providers-1c686ad1bfb80371)
+test curl_suggest_env_name ... ok
+test http_tier1_content_length_preflight_cap ... ok
+test makakoo_enumerate_and_hydrate ... ok
+test http_tier1_happy_path_and_response_path ... ok
+test curl_basic_post_with_headers_and_data ... ok
+test curl_line_continuation_and_variants ... ok
+test curl_prompt_injection_and_credentials_and_response_path ... ok
+test curl_refusals ... ok
+test http_tier1_wall_clock_deadline_enforced ... ok
+test result: ok. 9 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.21s
+
+## Golden parity (`tools/parity/golden_run.py --corpus tools/parity/corpus/s3-team.json`)
+PASS team-default                       native   exit=0   files=1   rust=0.61s python=1.12s attempt=1
+PASS team-list                          native   exit=0   files=1   rust=0.01s python=0.69s attempt=1
+PASS team-list-no-config                native   exit=0   files=0   rust=0.01s python=0.71s attempt=1
+PASS team-enable-builtin                native   exit=0   files=2   rust=0.03s python=0.93s attempt=1
+PASS team-enable-primary                native   exit=0   files=2   rust=0.03s python=0.94s attempt=1
+PASS team-enable-already                native   exit=0   files=2   rust=0.04s python=0.93s attempt=1
+PASS team-enable-unknown                native   exit=2   files=1   rust=0.02s python=0.93s attempt=1
+PASS team-enable-bad-primary            native   exit=2   files=1   rust=0.01s python=0.94s attempt=1
+PASS team-enable-no-config              native   exit=0   files=2   rust=0.04s python=0.72s attempt=1
+PASS team-enable-custom                 native   exit=0   files=2   rust=0.04s python=0.86s attempt=1
+PASS team-disable                       native   exit=0   files=2   rust=0.04s python=0.96s attempt=1
+PASS team-disable-all                   native   exit=0   files=2   rust=0.04s python=0.94s attempt=1
+PASS team-disable-missing               native   exit=1   files=1   rust=0.01s python=0.92s attempt=1
+PASS team-remove-validator              native   exit=0   files=2   rust=0.03s python=0.92s attempt=1
+PASS team-remove-primary                native   exit=0   files=2   rust=0.04s python=0.94s attempt=1
+PASS team-remove-provider-only          native   exit=0   files=2   rust=0.04s python=0.72s attempt=1
+PASS team-remove-missing                native   exit=1   files=1   rust=0.01s python=0.96s attempt=1
+PASS team-add-subprocess                native   exit=0   files=2   rust=0.04s python=1.01s attempt=1
+PASS team-add-subprocess-auto-prompt    native   exit=0   files=2   rust=0.04s python=1.00s attempt=1
+PASS team-add-http                      native   exit=0   files=2   rust=0.04s python=1.01s attempt=1
+PASS team-add-from-curl                 native   exit=0   files=2   rust=0.04s python=1.16s attempt=1
+PASS team-add-from-curl-literal-refused native   exit=2   files=1   rust=0.02s python=1.01s attempt=1
+PASS team-add-builtin-refused           native   exit=2   files=1   rust=0.01s python=1.05s attempt=1
+PASS team-add-duplicate-refused         native   exit=2   files=1   rust=0.01s python=1.16s attempt=1
+PASS team-add-duplicate-force           native   exit=0   files=2   rust=0.04s python=1.05s attempt=1
+PASS team-test-ok                       native   exit=0   files=4   rust=0.77s python=2.45s attempt=1
+PASS team-test-unknown                  native   exit=1   files=3   rust=0.09s python=1.12s attempt=1
+PASS team-test-fail                     native   exit=1   files=3   rust=0.82s python=2.47s attempt=1
+PASS team-health-text                   native   exit=0   files=4   rust=0.95s python=3.26s attempt=1
+PASS team-health-json                   native   exit=0   files=4   rust=1.63s python=3.44s attempt=1
+PASS team-health-fail                   native   exit=1   files=4   rust=1.05s python=3.37s attempt=1
+PASS configure-non-interactive          native   exit=0   files=2   rust=0.04s python=0.85s attempt=1
+golden-run: 32/32 cases identical

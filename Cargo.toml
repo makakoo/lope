@@ -1,0 +1,41 @@
+[workspace]
+resolver = "2"
+members = ["crates/*"]
+
+[workspace.package]
+version = "2.0.0"
+edition = "2021"
+rust-version = "1.96"
+license = "MIT"
+repository = "https://github.com/traylinx/lope"
+publish = false
+
+# Shared versions follow makakoo-os/Cargo.toml where both projects use a crate
+# (Spec 01 §3).
+[workspace.dependencies]
+clap = { version = "4", default-features = false, features = ["std", "help", "usage", "error-context"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+libc = "0.2"
+regex = "1.11"
+fancy-regex = "0.14"
+sha2 = "0.10"
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+
+lope-core = { path = "crates/lope-core" }
+lope-state = { path = "crates/lope-state" }
+lope-runtime = { path = "crates/lope-runtime" }
+lope-providers = { path = "crates/lope-providers" }
+lope-memory = { path = "crates/lope-memory" }
+lope-makakoo = { path = "crates/lope-makakoo" }
+lope-engine = { path = "crates/lope-engine" }
+lope-flow = { path = "crates/lope-flow" }
+lope-compat = { path = "crates/lope-compat" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+panic = "abort"
+strip = "symbols"

@@ -1,0 +1,4 @@
+{
+  "comment": "Documented additive differences between the clap grammar and Python's argparse tree (Spec 03 A1). Each entry needs a reason. Additive behaviour handled before parsing (DEC-11 normalisation: --version/-V, --consensus quorum, --rounds) does not appear in the grammar and needs no entry.",
+  "entries": []
+}

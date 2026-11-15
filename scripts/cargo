@@ -1,0 +1,12 @@
+#!/bin/sh
+# Run cargo with the toolchain pinned in rust-toolchain.toml.
+#
+# On this machine Homebrew's cargo/rustc 1.89 (/usr/local/bin) come before
+# rustup's proxies on PATH, and rustup 1.29 no longer prepends the toolchain
+# directory when it runs cargo. So `~/.cargo/bin/cargo` alone still compiles
+# with Homebrew's rustc. Putting the proxies first fixes rustc, rustdoc and
+# clippy-driver together.
+bin="${CARGO_HOME:-$HOME/.cargo}/bin"
+PATH="$bin:$PATH"
+export PATH
+exec "$bin/cargo" "$@"

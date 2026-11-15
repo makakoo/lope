@@ -1,0 +1,34 @@
+Sprint S8 — Cutover, Install, Docs & Benchmarks
+================================================
+
+Implemented:
+- lope-cli/src/native/install.rs (`lope install [--host <h>]`, FR37):
+  Locates Lope skills/install assets (`LOPE_SOURCE_DIR`, exe-relative, `$HOME/.lope`) and runs `bash <assets>/install` for all 8 hosts (`claude`, `codex`, `gemini`, `opencode`, `cursor`, `vibe`, `qwen`, `pi`, `all`).
+- lope-cli/src/native/docs.rs (`lope docs`, FR39):
+  Outputs `reference.md` natively (checking `LOPE_SOURCE_DIR`, `$HOME/.lope/docs/reference.md`, and embedded `crates/lope-cli/assets/reference.md`).
+- `update` / `upgrade` (FR38, OQ-2):
+  Kept delegated to Python Lope until OQ-2 distribution format is decided.
+- Release binary & host cutover:
+  - Preserved Python shim at `/usr/local/bin/lope-py` (`lope-py version` -> `0.17.3`)
+  - Installed Rust release binary (`target/release/lope`) at `/usr/local/bin/lope` (`lope 2.0.0 (super-lope; compat 0.17.3)`)
+  - Retargeted `~/bin/lope` -> `/usr/local/bin/lope`
+  - Removed `~/.zshrc` Python alias (`alias lope=...`)
+  - Rollback: `cp /usr/local/bin/lope-py /usr/local/bin/lope` or `LOPE_FORCE_PYTHON=1`
+
+Benchmarks (Intel Mac, 5-run median, `/usr/bin/time -l`):
+| Command       | Rust median | Python median | Speedup | Rust max RSS | Python max RSS |
+|---------------|-------------|---------------|---------|--------------|----------------|
+| version       |      16.5ms |       312.5ms |   18.9x |        1.1MB |         14.6MB |
+| status        |      23.1ms |       329.8ms |   14.3x |        1.5MB |         15.8MB |
+| flow list     |      16.0ms |       331.7ms |   20.7x |        1.2MB |         15.5MB |
+| docs          |      17.2ms |       293.2ms |   17.0x |        1.2MB |         14.5MB |
+| memory stats  |      23.8ms |       327.0ms |   13.7x |        1.9MB |         16.1MB |
+
+Verification:
+- `./scripts/cargo build --release`: passed
+- `./scripts/cargo test --workspace`: passed (exit 0), including:
+  - `s8_cutover_parity`: `s8_docs_and_install_all_8_hosts_and_update_delegation` passed
+  - `router_cli`: 8/8 passed
+  - `delegation_fidelity`: 27/27 golden_run cases identical
+  - `s1_native_parity`, `s3_team_parity`, `s4_fanout_parity`, `s6_deliberate_parity`, `s7_sprint_flow_parity` (2/2, 5/5 golden_run)
+  - `lope-compat` (22/22), `lope-core` (10/10), `lope-engine` (12/12 + 4/4), `lope-flow` (3/3), `lope-makakoo` (3/3), `lope-memory` (2/2), `lope-providers` (1/1 + 9/9), `lope-runtime` (1/1 + 5/5), `lope-state` (3/3 + 1/1)

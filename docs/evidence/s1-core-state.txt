@@ -1,0 +1,113 @@
+# S1 evidence — core config and state; native status + jobs
+generated 2026-11-07T16:43:17Z; baseline tag super-lope-baseline-0.17.3
+
+## Native coverage table
+fingerprint fnv64:384a9037a9953836
+S0       lope version                  args: []
+S1       lope status                   args: []
+S1       lope jobs                     args: []
+S1       lope jobs list                args: [--json]
+S1       lope jobs reap                args: [--dry-run, --stale, --json]
+S1       lope jobs prune               args: [--stale, --dry-run, --json]
+S1       lope jobs kill                args: [run_id, --json]
+
+## A3 — config.json round trip (cargo test -p lope-core --test config_python_roundtrip)
+PASS A3 minimal: Rust save is byte-identical to Python save
+PASS A3 minimal: Python loads the Rust-written config
+PASS A3 minimal: same file mode (600)
+PASS A3 full: Rust save is byte-identical to Python save
+PASS A3 full: Python loads the Rust-written config
+PASS A3 full: same file mode (600)
+PASS A3 unknown_keys_dropped: Rust save is byte-identical to Python save
+PASS A3 unknown_keys_dropped: Python loads the Rust-written config
+PASS A3 unknown_keys_dropped: same file mode (600)
+PASS A3 bool_as_int: Rust save is byte-identical to Python save
+PASS A3 bool_as_int: Python loads the Rust-written config
+PASS A3 bool_as_int: same file mode (600)
+PASS A3 defaults_omitted: Rust save is byte-identical to Python save
+PASS A3 defaults_omitted: Python loads the Rust-written config
+PASS A3 defaults_omitted: same file mode (600)
+PASS A3 learned_partial: Rust save is byte-identical to Python save
+PASS A3 learned_partial: Python loads the Rust-written config
+PASS A3 learned_partial: same file mode (600)
+PASS A3 unicode: Rust save is byte-identical to Python save
+PASS A3 unicode: Python loads the Rust-written config
+PASS A3 unicode: same file mode (600)
+PASS A3 float_version: Rust save is byte-identical to Python save
+PASS A3 float_version: Python loads the Rust-written config
+PASS A3 float_version: same file mode (600)
+PASS A3 rej_version2: both reject
+PASS A3 rej_no_version: both reject
+PASS A3 rej_float_timeout: both reject
+PASS A3 rej_policy: both reject
+PASS A3 rej_zero_calls: both reject
+PASS A3 rej_list: both reject
+PASS A3 rej_bad_learned_float: Python raises ValueError (F7); Rust rejects the file instead of crashing
+PASS A3 live_shape: Rust save is byte-identical to Python save
+PASS A3 live_shape: Python loads the Rust-written config
+PASS A3 live_shape: same file mode (600)
+s1-interop: 0 failures
+
+## A4 — run registry interop (cargo test -p lope-state --test registry_python_interop)
+PASS A4 list: Rust and Python list each other's manifests identically (4 rows)
+PASS A4 extra fields: Python lists a manifest carrying Rust-only fields
+PASS A4 reap --dry-run: identical plans
+PASS A4 prune: 3 dead pruned, 1 live untouched ({'py-dead-0': 'reaped', 'rs-dead-0': 'reaped', 'rs-dead-1': 'reaped', 'rs-live': 'refused'})
+PASS A4 prune: Python sees only the live run left
+PASS A4 prune: scratch of dead runs removed
+PASS A4 prune: 3 completed manifests written
+PASS A4 completed manifest py-dead-0.json readable by Python, state=reaped
+PASS A4 completed manifest rs-dead-0.json readable by Python, state=reaped
+PASS A4 completed manifest rs-dead-1.json readable by Python, state=reaped
+PASS A4 close: Python closes a Rust-written run with Rust-only fields (closed)
+PASS A4 close: Rust closes a Python-written run
+PASS A4 end: registry empty
+PASS A4 bytes: a Rust-written manifest is byte-identical to Python's json.dump of the same content
+s1-interop: 0 failures
+
+## Golden runs: native status/jobs vs Python (cargo test -p lope-cli --test s1_native_parity)
+     Running tests/s1_native_parity.rs (target/debug/deps/s1_native_parity-727d50a76b65595c)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS status-plain                       native   exit=0   files=1   rust=1.14s python=2.29s attempt=1
+PASS status-no-config                   native   exit=0   files=0   rust=0.02s python=1.58s attempt=1
+PASS status-rich-config                 native   exit=0   files=2   rust=0.02s python=1.92s attempt=1
+PASS status-unbounded                   native   exit=0   files=1   rust=0.02s python=1.62s attempt=1
+PASS status-registry-mix                native   exit=0   files=8   rust=0.51s python=2.20s attempt=1
+PASS jobs-default-empty                 native   exit=0   files=1   rust=0.02s python=1.96s attempt=1
+PASS jobs-list-empty                    native   exit=0   files=1   rust=0.03s python=1.99s attempt=1
+PASS jobs-list-json-empty               native   exit=0   files=1   rust=0.02s python=2.01s attempt=1
+PASS jobs-reap-empty                    native   exit=0   files=1   rust=0.02s python=1.97s attempt=1
+PASS jobs-prune-stale-empty             native   exit=0   files=1   rust=0.02s python=2.48s attempt=1
+PASS jobs-list-mix                      native   exit=0   files=8   rust=0.60s python=2.52s attempt=1
+PASS jobs-list-json-mix                 native   exit=0   files=8   rust=3.77s python=2.89s attempt=1
+PASS jobs-reap-dry-run-mix              native   exit=0   files=7   rust=0.51s python=2.38s attempt=1
+PASS jobs-reap-json-dry-run             native   exit=0   files=5   rust=0.47s python=2.49s attempt=1
+PASS jobs-reap-dead                     native   exit=0   files=3   rust=0.28s python=3.38s attempt=1
+PASS jobs-prune-dead-json               native   exit=0   files=3   rust=0.36s python=3.68s attempt=1
+PASS jobs-reap-mix-refused              native   exit=1   files=5   rust=0.29s python=3.03s attempt=1
+PASS jobs-kill-live                     native   exit=0   files=3   rust=0.17s python=3.88s attempt=1
+PASS jobs-kill-live-json                native   exit=0   files=3   rust=0.17s python=2.93s attempt=1
+PASS jobs-kill-dead                     native   exit=1   files=4   rust=0.07s python=2.70s attempt=1
+PASS jobs-kill-missing                  native   exit=1   files=1   rust=0.03s python=3.11s attempt=1
+PASS jobs-kill-invalid-id               native   exit=1   files=1   rust=0.06s python=2.50s attempt=1
+PASS jobs-abbrev                        native   exit=0   files=1   rust=0.03s python=2.84s attempt=1
+PASS jobs-help-delegated                delegate exit=0   files=1   rust=2.92s python=2.81s attempt=1
+golden-run: 24/24 cases identical
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 138.81s
+
+## Building blocks verified against CPython by differential fuzzing
+pyjson dumps (4 json.dumps flavours, 30000 random docs, 5 seeds): 0 mismatches
+pyjson loads incl. exact JSONDecodeError text (32000 docs, 4 seeds): 0 mismatches
+redaction (12000 random secret-shaped strings, 3 seeds): 0 mismatches
+
+## NFR6 rollback
+Python loads every Rust-written config.json (A3), lists/reaps/closes Rust-written manifests,
+and tolerates Rust-only manifest fields (A4: 'extra fields' check). Rust writes no other state in S1.
+
+## Findings
+F7  config.py:_hydrate_cfg calls float() on learned_adapters timestamp/confidence unguarded:
+    a non-numeric value makes load() raise ValueError (crash) instead of returning None.
+    Rust treats the file as rejected (None). Pinned in A3 (rej_bad_learned_float).
+F8  Python tolerates extra manifest fields (A4) -> FR12 summary fields may go into manifests;
+    the .diag sidecar stays the primary store (Spec 04 §5 resolved).
+F9  cpu_percent is the int 0 when no process rows exist, a float otherwise (round(sum([]),3)).

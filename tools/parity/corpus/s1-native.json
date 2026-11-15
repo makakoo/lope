@@ -1,0 +1,198 @@
+{
+ "comment": "S1 corpus: native status/jobs (Rust) vs direct Python Lope, with registry fixtures created through Python's own RunRegistry.",
+ "cases": [
+  {
+   "name": "status-plain",
+   "argv": [
+    "status"
+   ]
+  },
+  {
+   "name": "status-no-config",
+   "argv": [
+    "status"
+   ],
+   "setup_py": "os.unlink(os.path.join(os.environ['LOPE_HOME'], 'config.json'))\n"
+  },
+  {
+   "name": "status-rich-config",
+   "argv": [
+    "status"
+   ],
+   "setup_py": "\ncfg = json.load(open(os.path.join(os.environ['LOPE_HOME'], 'config.json')))\nnow = time.time()\ncfg['learned_adapters'] = {\n  'claude': {'argv_template': ['claude', '--print', '{prompt}'], 'stdin_mode': 'none', 'stdout_parser': 'plaintext', 'timestamp': now - 100*86400, 'source_cli': 'codex', 'confidence': 0.91},\n  'gemini': {'argv_template': ['gemini', '-p', '{prompt}'], 'timestamp': now - 70*86400, 'source_cli': '', 'confidence': 0},\n  'qwen': {'argv_template': ['qwen'], 'timestamp': 0},\n}\ncfg['run_timeout'] = 900\ncfg['max_calls'] = 12\ncfg['providers'].append({'name': 'web', 'type': 'http', 'url': 'https://example.invalid/v1'})\njson.dump(cfg, open(os.path.join(os.environ['LOPE_HOME'], 'config.json'), 'w'))\nwith open(os.path.join(os.environ['LOPE_HOME'], 'journal.jsonl'), 'w') as f:\n  for i, ev in enumerate(['heal_attempt', 'run_start', 'heal_success', 'heal_failure']):\n    f.write(json.dumps({'timestamp': now - 3600 - i, 'event': ev, 'cli': 'claude'}) + '\\n')\n  f.write('not json\\n')\n"
+  },
+  {
+   "name": "status-unbounded",
+   "argv": [
+    "status"
+   ],
+   "setup_py": "c=json.load(open(os.environ['LOPE_HOME']+'/config.json'));c['allow_unbounded_run']=True;c['parallel']=True;c['timeout']=True;json.dump(c,open(os.environ['LOPE_HOME']+'/config.json','w'))\n"
+  },
+  {
+   "name": "status-registry-mix",
+   "argv": [
+    "status"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\nopen(os.path.join(str(r.active_dir), 'broken.json'), 'w').write('{not json')\nopen(os.path.join(str(r.active_dir), 'list.json'), 'w').write('[1, 2]')\np = spawn('sleep', '600')\nr.start_run('execute', run_id='run-failed', owner_pid=p.pid)\nr.update('run-failed', lambda m: dict(m, cleanup_result='cleanup_failed', reason='owned resource cleanup incomplete'))\n"
+  },
+  {
+   "name": "jobs-default-empty",
+   "argv": [
+    "jobs"
+   ]
+  },
+  {
+   "name": "jobs-list-empty",
+   "argv": [
+    "jobs",
+    "list"
+   ]
+  },
+  {
+   "name": "jobs-list-json-empty",
+   "argv": [
+    "jobs",
+    "list",
+    "--json"
+   ]
+  },
+  {
+   "name": "jobs-reap-empty",
+   "argv": [
+    "jobs",
+    "reap"
+   ]
+  },
+  {
+   "name": "jobs-prune-stale-empty",
+   "argv": [
+    "jobs",
+    "prune",
+    "--stale"
+   ]
+  },
+  {
+   "name": "jobs-list-mix",
+   "argv": [
+    "jobs",
+    "list"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\nopen(os.path.join(str(r.active_dir), 'broken.json'), 'w').write('{not json')\nopen(os.path.join(str(r.active_dir), 'list.json'), 'w').write('[1, 2]')\np = spawn('sleep', '600')\nr.start_run('execute', run_id='run-failed', owner_pid=p.pid)\nr.update('run-failed', lambda m: dict(m, cleanup_result='cleanup_failed', reason='owned resource cleanup incomplete'))\n"
+  },
+  {
+   "name": "jobs-list-json-mix",
+   "argv": [
+    "jobs",
+    "list",
+    "--json"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\nopen(os.path.join(str(r.active_dir), 'broken.json'), 'w').write('{not json')\nopen(os.path.join(str(r.active_dir), 'list.json'), 'w').write('[1, 2]')\np = spawn('sleep', '600')\nr.start_run('execute', run_id='run-failed', owner_pid=p.pid)\nr.update('run-failed', lambda m: dict(m, cleanup_result='cleanup_failed', reason='owned resource cleanup incomplete'))\n"
+  },
+  {
+   "name": "jobs-reap-dry-run-mix",
+   "argv": [
+    "jobs",
+    "reap",
+    "--dry-run"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\nopen(os.path.join(str(r.active_dir), 'broken.json'), 'w').write('{not json')\nopen(os.path.join(str(r.active_dir), 'list.json'), 'w').write('[1, 2]')\n"
+  },
+  {
+   "name": "jobs-reap-json-dry-run",
+   "argv": [
+    "jobs",
+    "reap",
+    "--dry-run",
+    "--json"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\n"
+  },
+  {
+   "name": "jobs-reap-dead",
+   "argv": [
+    "jobs",
+    "reap"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\n"
+  },
+  {
+   "name": "jobs-prune-dead-json",
+   "argv": [
+    "jobs",
+    "prune",
+    "--json"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\n"
+  },
+  {
+   "name": "jobs-reap-mix-refused",
+   "argv": [
+    "jobs",
+    "reap"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\nopen(os.path.join(str(r.active_dir), 'broken.json'), 'w').write('{not json')\nopen(os.path.join(str(r.active_dir), 'list.json'), 'w').write('[1, 2]')\n"
+  },
+  {
+   "name": "jobs-kill-live",
+   "argv": [
+    "jobs",
+    "kill",
+    "run-live"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\n"
+  },
+  {
+   "name": "jobs-kill-live-json",
+   "argv": [
+    "jobs",
+    "kill",
+    "run-live",
+    "--json"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = spawn('sleep', '600')\nr.start_run('ask', run_id='run-live', run_timeout=3600, owner_pid=p.pid)\n"
+  },
+  {
+   "name": "jobs-kill-dead",
+   "argv": [
+    "jobs",
+    "kill",
+    "run-dead"
+   ],
+   "setup_py": "from lope.jobs import RunRegistry\nr = RunRegistry()\np = subprocess.Popen(['sleep','600'], start_new_session=True)\nr.start_run('review', run_id='run-dead', owner_pid=p.pid)\nwd = r.run_work_dir('run-dead')\nf = os.path.join(str(wd), 'scratch.txt'); open(f,'w').write('x')\nr.register_call('run-dead', {'call_id':'c1','validator':'mock-a','state':'finished','owned_paths':[f]})\np.kill(); p.wait()\n"
+  },
+  {
+   "name": "jobs-kill-missing",
+   "argv": [
+    "jobs",
+    "kill",
+    "nope"
+   ]
+  },
+  {
+   "name": "jobs-kill-invalid-id",
+   "argv": [
+    "jobs",
+    "kill",
+    "bad/id",
+    "--json"
+   ]
+  },
+  {
+   "name": "jobs-abbrev",
+   "argv": [
+    "jobs",
+    "list",
+    "--js"
+   ]
+  },
+  {
+   "name": "jobs-help-delegated",
+   "argv": [
+    "jobs",
+    "--help"
+   ],
+   "route": "delegate"
+  }
+ ],
+ "default_route": "native"
+}

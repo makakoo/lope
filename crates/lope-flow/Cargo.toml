@@ -1,0 +1,19 @@
+[package]
+name = "lope-flow"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+lope-core.workspace = true
+lope-providers.workspace = true
+lope-engine.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+regex.workspace = true
+sha2.workspace = true
+
+[dev-dependencies]
+tempfile.workspace = true

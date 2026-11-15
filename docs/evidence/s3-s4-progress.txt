@@ -1,0 +1,94 @@
+# S3/S4 progress evidence — providers + first native fan-out verbs
+generated 2026-11-07T18:09:05Z
+
+## Native coverage
+fingerprint fnv64:996e8dcdda8054a5
+S0       lope version                  args: []
+S1       lope status                   args: []
+S1       lope jobs                     args: []
+S1       lope jobs list                args: [--json]
+S1       lope jobs reap                args: [--dry-run, --stale, --json]
+S1       lope jobs prune               args: [--stale, --dry-run, --json]
+S1       lope jobs kill                args: [run_id, --json]
+S4       lope ask                      args: [question, --json, --context, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
+S4       lope pipe                     args: [--require-all, --json, --validators, --primary, --timeout, --respect-provider-timeout, --run-timeout, --allow-unbounded-run, --max-calls, --max-chunks, --request-policy, --parallel, --sequential]
+
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS ask-basic                          native   exit=0   files=4   rust=4.89s python=11.49s attempt=1
+PASS ask-json                           native   exit=0   files=4   rust=2.76s python=15.40s attempt=1
+PASS ask-context                        native   exit=0   files=4   rust=2.98s python=12.91s attempt=1
+PASS ask-sequential                     native   exit=0   files=4   rust=2.56s python=13.39s attempt=1
+PASS ask-one-validator                  native   exit=0   files=4   rust=2.25s python=9.08s attempt=1
+PASS ask-long-preview                   native   exit=0   files=4   rust=3.32s python=13.17s attempt=1
+PASS ask-failing-validator              native   exit=1   files=4   rust=3.97s python=13.22s attempt=1
+PASS ask-unknown-validator              native   exit=0   files=4   rust=2.73s python=10.74s attempt=1
+PASS ask-synth-delegates                delegate exit=0   files=4   rust=17.80s python=17.08s attempt=1
+PASS pipe-basic                         native   exit=0   files=4   rust=2.47s python=11.15s attempt=1
+PASS pipe-json                          native   exit=0   files=4   rust=2.16s python=12.55s attempt=1
+PASS pipe-empty                         native   exit=2   files=1   rust=0.03s python=4.34s attempt=1
+PASS pipe-require-all                   native   exit=1   files=4   rust=3.12s python=15.50s attempt=1
+PASS pipe-synth-replays-stdin           delegate exit=0   files=4   rust=13.03s python=12.41s attempt=1
+PASS pipe-http-provider-replays-stdin   handback exit=1   files=3   rust=11.54s python=10.15s attempt=1
+golden-run: 15/15 cases identical
+
+## Differential fuzzing (0 mismatches)
+verdict parser + diagnostics redaction + output validity: 16000 cases (tools/parity/verdict_fuzz.py)
+
+## Hand-back design
+A native verb returns Native::Delegate before any output or state write when it meets
+something not ported (http/makakoo providers, opencode/aider built-ins, prompt_wrapper
+fields, chunked/rejected request plans, --synth/--anonymous/--brain-*, first-run setup).
+pipe replays the stdin it already consumed to Python through a pipe (case
+pipe-http-provider-replays-stdin, route=handback, identical output).
+## Golden runs (ask, pipe, vote, compare)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS ask-basic                          native   exit=0   files=4   rust=4.47s python=16.51s attempt=2
+PASS ask-json                           native   exit=0   files=4   rust=3.92s python=15.36s attempt=1
+PASS ask-context                        native   exit=0   files=4   rust=1.98s python=13.05s attempt=1
+PASS ask-sequential                     native   exit=0   files=4   rust=2.52s python=13.58s attempt=1
+PASS ask-one-validator                  native   exit=0   files=4   rust=3.29s python=15.83s attempt=1
+PASS ask-long-preview                   native   exit=0   files=4   rust=3.74s python=12.61s attempt=1
+PASS ask-failing-validator              native   exit=1   files=4   rust=2.82s python=12.26s attempt=1
+PASS ask-unknown-validator              native   exit=0   files=4   rust=3.11s python=13.93s attempt=1
+PASS ask-synth-delegates                delegate exit=0   files=4   rust=23.74s python=19.55s attempt=1
+PASS pipe-basic                         native   exit=0   files=4   rust=2.41s python=17.71s attempt=1
+PASS pipe-json                          native   exit=0   files=4   rust=2.90s python=22.11s attempt=1
+PASS pipe-empty                         native   exit=2   files=1   rust=0.03s python=8.61s attempt=1
+PASS pipe-require-all                   native   exit=1   files=4   rust=4.52s python=17.55s attempt=1
+PASS pipe-synth-replays-stdin           delegate exit=0   files=4   rust=18.26s python=13.72s attempt=1
+PASS pipe-http-provider-replays-stdin   handback exit=1   files=3   rust=6.33s python=7.21s attempt=1
+PASS vote-basic                         native   exit=1   files=4   rust=2.19s python=12.92s attempt=1
+PASS vote-json                          native   exit=1   files=4   rust=2.68s python=11.22s attempt=1
+PASS vote-says-4                        native   exit=0   files=4   rust=4.00s python=13.49s attempt=1
+PASS vote-says-4-json                   native   exit=0   files=4   rust=2.58s python=12.77s attempt=1
+PASS vote-failing                       native   exit=0   files=4   rust=3.71s python=17.77s attempt=1
+PASS vote-one-option                    native   exit=2   files=1   rust=0.03s python=4.29s attempt=1
+PASS vote-dup-options                   native   exit=2   files=1   rust=0.03s python=3.65s attempt=1
+PASS vote-long-prompt                   native   exit=0   files=4   rust=2.83s python=12.81s attempt=1
+PASS compare-basic                      native   exit=0   files=6   rust=2.41s python=10.87s attempt=1
+PASS compare-criteria-json              native   exit=0   files=6   rust=2.08s python=25.75s attempt=1
+PASS compare-missing-b                  native   exit=1   files=3   rust=0.03s python=6.31s attempt=1
+PASS compare-failing                    native   exit=1   files=6   rust=3.62s python=21.70s attempt=1
+golden-run: 27/27 cases identical
+
+## Golden runs (team)
+golden-run: rust=/Users/sebastian/Projects/apps/super-lope/target/debug/lope python=/usr/bin/python3 source=/Users/sebastian/.lope
+PASS team-default                       native   exit=0   files=1   rust=2.12s python=3.61s attempt=1
+PASS team-list                          native   exit=0   files=1   rust=0.03s python=2.64s attempt=1
+PASS team-list-no-config                native   exit=0   files=0   rust=0.03s python=2.48s attempt=1
+PASS team-enable-builtin                native   exit=0   files=2   rust=0.06s python=3.08s attempt=1
+PASS team-enable-primary                native   exit=0   files=2   rust=0.05s python=2.23s attempt=1
+PASS team-enable-already                native   exit=0   files=2   rust=0.05s python=2.11s attempt=1
+PASS team-enable-unknown                native   exit=2   files=1   rust=0.03s python=1.97s attempt=1
+PASS team-enable-bad-primary            native   exit=2   files=1   rust=0.03s python=2.12s attempt=1
+PASS team-enable-no-config              native   exit=0   files=2   rust=0.05s python=4.77s attempt=1
+PASS team-enable-custom                 native   exit=0   files=2   rust=0.07s python=2.51s attempt=1
+PASS team-disable                       native   exit=0   files=2   rust=0.05s python=3.71s attempt=1
+PASS team-disable-all                   native   exit=0   files=2   rust=0.06s python=2.91s attempt=1
+PASS team-disable-missing               native   exit=1   files=1   rust=0.03s python=4.14s attempt=1
+PASS team-remove-validator              native   exit=0   files=2   rust=0.06s python=3.38s attempt=1
+PASS team-remove-primary                native   exit=0   files=2   rust=0.05s python=3.59s attempt=1
+PASS team-remove-provider-only          native   exit=0   files=2   rust=0.06s python=3.42s attempt=1
+PASS team-remove-missing                native   exit=1   files=1   rust=0.03s python=4.43s attempt=1
+PASS team-add-delegates                 delegate exit=0   files=2   rust=4.92s python=2.89s attempt=1
+golden-run: 18/18 cases identical
