@@ -244,7 +244,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "lope-cli"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "clap",
  "fancy-regex",
@@ -264,7 +264,7 @@ dependencies = [
 
 [[package]]
 name = "lope-compat"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "clap",
  "libc",
@@ -274,7 +274,7 @@ dependencies = [
 
 [[package]]
 name = "lope-core"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "libc",
  "regex",
@@ -286,7 +286,7 @@ dependencies = [
 
 [[package]]
 name = "lope-engine"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "fancy-regex",
  "libc",
@@ -304,7 +304,7 @@ dependencies = [
 
 [[package]]
 name = "lope-flow"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "lope-core",
  "lope-engine",
@@ -318,7 +318,7 @@ dependencies = [
 
 [[package]]
 name = "lope-makakoo"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "libc",
  "lope-core",
@@ -329,7 +329,7 @@ dependencies = [
 
 [[package]]
 name = "lope-memory"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "libc",
  "lope-core",
@@ -338,7 +338,7 @@ dependencies = [
 
 [[package]]
 name = "lope-providers"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "fancy-regex",
  "libc",
@@ -354,7 +354,7 @@ dependencies = [
 
 [[package]]
 name = "lope-runtime"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "libc",
  "lope-core",
@@ -367,7 +367,7 @@ dependencies = [
 
 [[package]]
 name = "lope-state"
-version = "2.0.0"
+version = "2.0.1"
 dependencies = [
  "libc",
  "lope-core",

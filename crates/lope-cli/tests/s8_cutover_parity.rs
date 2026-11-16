@@ -94,8 +94,15 @@ fn s8_docs_and_install_all_8_hosts_and_update_delegation() {
     assert!(docs_out.status.success(), "lope docs failed");
     let docs_txt = String::from_utf8_lossy(&docs_out.stdout);
     assert!(docs_txt.len() > 10_000, "docs output unexpectedly short");
-    for needle in ["lope", "2.0.0", "makakoo/lope", "lope-py", "LOPE_FORCE_PYTHON", "v2/config.toml", "lope --version"]
-    {
+    for needle in [
+        "lope",
+        env!("CARGO_PKG_VERSION"),
+        "makakoo/lope",
+        "lope-py",
+        "LOPE_FORCE_PYTHON",
+        "v2/config.toml",
+        "lope --version",
+    ] {
         assert!(docs_txt.contains(needle), "docs output missing {needle:?}");
     }
     for forbidden in ["traylinx/lope", "Zero Python dependencies", "PYTHONPATH=", "python3 -m lope", "super-lope"] {
@@ -130,7 +137,8 @@ fn s8_docs_and_install_all_8_hosts_and_update_delegation() {
         let stdout = String::from_utf8_lossy(&out.stdout);
         let stderr = String::from_utf8_lossy(&out.stderr);
         assert!(out.status.success(), "lope install --host {host} failed:\nstdout={stdout}\nstderr={stderr}");
-        assert!(stdout.contains("Lope v2.0.0"), "missing v2.0.0 banner for {host}:\n{stdout}");
+        let expected_banner = format!("Lope v{}", env!("CARGO_PKG_VERSION"));
+        assert!(stdout.contains(&expected_banner), "missing {expected_banner} banner for {host}:\n{stdout}");
         assert!(
             !stdout.contains("WARNING: python3 import check failed"),
             "unexpected python3 warning in packaged install for {host}:\n{stdout}"

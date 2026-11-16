@@ -3,7 +3,7 @@
 **Multi-CLI validator ensemble for AI work.** One AI CLI drafts; others validate. Works for multi-phase sprints (`negotiate` → `implement`/`execute` → `audit`), autonomous graph workflows (`flow`), single-shot multi-model tasks (`ask`, `review`, `vote`, `compare`, `pipe`), council deliberation (`deliberate`), objective evidence gates (`gate`, `check`), persistent judgment (`memory`), Makakoo Brain integration, and roster management (`team`).
 
 **Repository & versions:**
-- **`makakoo/lope` (`v2` branch):** Rust Lope 2.0 (`lope 2.0.0 (compat 0.17.3)`), targeting POSIX (`macos`, `linux`).
+- **`makakoo/lope` (`v2` branch):** Rust Lope 2.0 (`lope 2.0.1 (compat 0.17.3)`), targeting POSIX (`macos`, `linux`).
 - **Python compatibility & rollback (`0.17.3`):** Frozen compat baseline (`traylinx/lope`, local `lope-py` / `lope-agent` wheel) preserved for `LOPE_FORCE_PYTHON=1` rollback and schema/golden parity testing.
 
 ## Installing Prebuilt Releases (macOS & Linux)

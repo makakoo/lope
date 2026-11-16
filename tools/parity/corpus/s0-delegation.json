@@ -156,7 +156,7 @@
    "expect": {
     "exit": 0,
     "stdout_contains": [
-     "2.0.0",
+     "2.0.1",
      "makakoo/lope",
      "lope-py",
      "LOPE_FORCE_PYTHON",

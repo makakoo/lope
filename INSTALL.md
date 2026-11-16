@@ -4,7 +4,7 @@ You (the AI agent reading this) are going to install lope for your user. **Do no
 
 ## Context
 
-Lope is a multi-CLI validator ensemble for AI work. Any AI CLI drafts; any AI CLI validates. Current command surface as of v2.0.0 (`compat 0.17.3`):
+Lope is a multi-CLI validator ensemble for AI work. Any AI CLI drafts; any AI CLI validates. Current command surface as of v2.0.1 (`compat 0.17.3`):
 
 - **Sprint commands**: `/lope-negotiate`, `/lope-execute`, `/lope-implement`, `/lope-audit`
 - **Single-shot commands**: `/lope-ask`, `/lope-review`, `/lope-vote`, `/lope-compare`, `/lope-pipe`
@@ -270,7 +270,7 @@ lope --version
 lope status
 ```
 
-`--version` prints `lope 2.0.0 (compat 0.17.3)`. `status` lists detected AI CLIs. Either failing means the binary is not on `PATH` or config is unreadable — report the error.
+`--version` prints `lope 2.0.1 (compat 0.17.3)`. `status` lists detected AI CLIs. Either failing means the binary is not on `PATH` or config is unreadable — report the error.
 
 To refresh host skills or update the release tarball, re-run `./install.sh --prefix /usr/local` or:
 
@@ -278,7 +278,7 @@ To refresh host skills or update the release tarball, re-run `./install.sh --pre
 lope install --host all
 ```
 
-`lope update` / `lope upgrade` delegate to the Python `0.17.3` updater in v2.0.0 for git-backed compatibility installs; for prebuilt native v2 tarballs, download the latest release from `https://github.com/makakoo/lope/releases` and re-run `./install.sh`, or rebuild from the `v2` branch.
+`lope update` / `lope upgrade` delegate to the Python `0.17.3` updater in v2.0.1 for git-backed compatibility installs; for prebuilt native v2 tarballs, download the latest release from `https://github.com/makakoo/lope/releases` and re-run `./install.sh`, or rebuild from the `v2` branch.
 
 ## Step 4 — Ensure install bin directory is on `PATH`
 

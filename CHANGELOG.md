@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.0.1 — Linux aarch64 release cross-linking & QEMU smoke verification
+
+- **Linux ARM64 release cross-linking (`publish.yml`):** Configure multiarch `arm64` APT sources (`ubuntu-ports` for `jammy{,-updates,-security}` with existing host `.list` and deb822 `.sources` scoped to `amd64`) and install `libsqlite3-dev:arm64` alongside explicit `-L native=/usr/lib/aarch64-linux-gnu` Cargo search flags so `aarch64-unknown-linux-gnu` links against SQLite on the `ubuntu-22.04` (`glibc >= 2.35`) baseline and resolves `libsqlite3.so.0` at runtime.
+- **QEMU ARM64 runtime verification & version-agnostic parity tests:** Smoke-test `--version`, `docs`, and SQLite-backed `memory stats` under `qemu-aarch64` with explicit multiarch `LD_LIBRARY_PATH`, and parameterize `s8_cutover_parity.rs` version assertions via `CARGO_PKG_VERSION`.
+- **Preserve the existing `v2.0.0` tag unchanged; do not move or recreate it.** No `v2.0.0` release assets were published because the `aarch64-unknown-linux-gnu` cross build failed during linking; this patch carries the release pipeline fix forward as the first Lope v2 release with published assets (`compat 0.17.3`).
+
 ## 2.0.0 — Native Rust CLI (compat 0.17.3)
 
 - **Native Rust CLI & zero-delegation command surface (`lope 2.0.0 (compat 0.17.3)`):** Full workspace rewrite across `lope-core`, `lope-runtime`, `lope-providers`, `lope-engine`, `lope-makakoo`, `lope-compat`, and `lope-cli`, delivering schema parity (`48` commands / `347` arguments), `177/177` golden CLI output parity against Python `0.17.3`, native subcommands (`ask`, `review`, `vote`, `compare`, `pipe`, `negotiate`, `execute`, `implement`, `audit`, `deliberate`, `flow`, `memory`, `gate`, `check`, `team`, `jobs`, `status`, `configure`, `install`, `docs`, `version`), and ~12x faster startup with ~10x smaller memory footprint.

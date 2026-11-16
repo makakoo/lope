@@ -18,7 +18,7 @@ Lope is primarily a CLI harness that runs **other** AI CLIs as validators. You i
 
 Works for **three domains**: `engineering` (default), `business`, `research`. Same loop, different validator role prompt and artifact labels. The domain knob applies to `negotiate`; single-shot verbs are domain-agnostic.
 
-Version: `lope 2.0.0 (compat 0.17.3)` (`/usr/local/bin/lope` native Rust CLI; `/usr/local/bin/lope-py` Python `0.17.3` rollback).
+Version: `lope 2.0.1 (compat 0.17.3)` (`/usr/local/bin/lope` native Rust CLI; `/usr/local/bin/lope-py` Python `0.17.3` rollback).
 
 Repo: https://github.com/makakoo/lope (`v2` branch for Lope 2.0) · MIT · Native Rust CLI (replaces Python runtime on `/usr/local/bin/lope`; emergency Python fallback via `LOPE_FORCE_PYTHON=1` or `lope-py`).
 
@@ -45,7 +45,7 @@ Command surface: structured sprint modes (`negotiate`, `execute`, `implement`, `
 | **Memory** | `lope memory {stats,search,file,hotspots,forget}` | — | Query the persistent finding store written by `lope review --remember`. See [docs/memory.md](memory.md). |
 | **Deliberate** | `lope deliberate <template> <scenario>` | — | Run a 7-stage Agent-Order-style council on an ADR / PRD / RFC / build-vs-buy / migration-plan / incident-review. See [docs/deliberation.md](deliberation.md). |
 | **Flow** *(v0.11)* | `lope flow {run,validate,render,init,list}` | `/lope-flow` | Run a declarative DOT **graph** workflow — agent / ensemble-review / shell-gate / judge-router nodes, conditioned edges, fan-out + fix-loops. Autonomous (no human gates), bounded by per-node and graph-wide visit caps. See [Flow](#flow--declarative-graph-workflows). |
-| **Update** | `lope update` (`lope upgrade` alias) | — | Delegated to the Python updater (`0.17.3`) in Lope v2.0.0 (`FR38`/`OQ-2`) until native `makakoo/lope` (`v2`) self-update / Homebrew distribution settles. Supports `--dry-run`, `--method`, `--host`, `--skip-install`, `--allow-dirty`. |
+| **Update** | `lope update` (`lope upgrade` alias) | — | Delegated to the Python updater (`0.17.3`) in Lope v2.0.1 (`FR38`/`OQ-2`) until native `makakoo/lope` (`v2`) self-update / Homebrew distribution settles. Supports `--dry-run`, `--method`, `--host`, `--skip-install`, `--allow-dirty`. |
 | **Headroom** | — | `/lope-headroom` | Configure, install, verify, or troubleshoot Headroom MCP compression for Lope and Lope-installed agent hosts. |
 | **Help** | `lope docs` | `/lope-help` | Print the complete reference containing all modes, flags, and hard rules. |
 
@@ -69,7 +69,7 @@ These flags layer on top of the existing modes. They are **opt-in** — commands
 | `--brain-context QUERY` | `ask`, `review`, `pipe`, `negotiate`, `deliberate` | Pull `makakoo search QUERY` and prepend to the validator prompts. |
 | `--brain-budget N` | same as above | Approximate token budget for brain context (default 1200). |
 | `--brain-log` | same as above | Append a `[[Lope]]` / `[[Makakoo OS]]` bullet to today's Brain journal. |
-| `--version` / `-V` | top-level `lope` | Normalized to `lope version` — prints `lope 2.0.0 (compat 0.17.3)`. |
+| `--version` / `-V` | top-level `lope` | Normalized to `lope version` — prints `lope 2.0.1 (compat 0.17.3)`. |
 | `--consensus quorum` | `review` | Normalized to `review --consensus` (unsupported modes such as `unanimous` exit `2`). |
 | `--rounds N` | `negotiate` | Compatibility alias normalized to `--max-rounds N`. |
 
@@ -566,7 +566,7 @@ Install or refresh host skills and commands across all 8 hosts (`claude`, `codex
 
 ### `lope update` / `lope upgrade`
 
-In Lope v2.0.0 (`FR38` / `OQ-2`), `update` and `upgrade` delegate to the Python helper (`0.17.3`) while native distribution for `makakoo/lope` (`v2` branch) settles. Supported flags remain `--dry-run`, `--method`, `--host <host>`, `--skip-install`, and `--allow-dirty`. For native Lope v2 binary upgrades from source, rebuild from the `v2` branch of `https://github.com/makakoo/lope` and reinstall `/usr/local/bin/lope`.
+In Lope v2.0.1 (`FR38` / `OQ-2`), `update` and `upgrade` delegate to the Python helper (`0.17.3`) while native distribution for `makakoo/lope` (`v2` branch) settles. Supported flags remain `--dry-run`, `--method`, `--host <host>`, `--skip-install`, and `--allow-dirty`. For native Lope v2 binary upgrades from source, rebuild from the `v2` branch of `https://github.com/makakoo/lope` and reinstall `/usr/local/bin/lope`.
 
 ```bash
 lope update --dry-run
@@ -577,7 +577,7 @@ lope upgrade                   # legacy alias
 
 ### `lope version` (and `lope --version` / `-V`)
 
-Prints `lope 2.0.0 (compat 0.17.3)`.
+Prints `lope 2.0.1 (compat 0.17.3)`.
 
 ### `lope docs`
 
@@ -824,16 +824,16 @@ Modes via `LOPE_CAVEMAN` env var:
 
 ## Install
 
-**Lope v2.0.0 native binary (macOS/Linux):**
+**Lope v2.0.1 native binary (macOS/Linux):**
 
-Lope v2 (`2.0.0`) runs as a single native Rust executable at `/usr/local/bin/lope`, built from the `v2` branch of `https://github.com/makakoo/lope`:
+Lope v2 (`2.0.1`) runs as a single native Rust executable at `/usr/local/bin/lope`, built from the `v2` branch of `https://github.com/makakoo/lope`:
 
 ```bash
 git clone -b v2 https://github.com/makakoo/lope.git
 cd lope
 cargo build --release -p lope-cli
 sudo install -m 0755 target/release/lope /usr/local/bin/lope
-lope --version                  # lope 2.0.0 (compat 0.17.3)
+lope --version                  # lope 2.0.1 (compat 0.17.3)
 lope install --host all         # or pick a host: claude, codex, gemini, ...
 lope configure
 lope docs
